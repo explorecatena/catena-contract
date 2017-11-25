@@ -50,6 +50,6 @@
     "yargs": "^10.0.3"
   },
   "dependencies": {
-    "truffle-contract": "github:cag/truffle-contract#split-tx-and-sync"
+    "truffle-contract": "github:explorecatena/truffle-contract#split-tx-and-sync"
   }
 }
