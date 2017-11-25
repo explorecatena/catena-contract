@@ -1,9 +1,7 @@
-# README #
+# Catena Smart Contract
+Used to publish NRC public funding disclosures and on the Ethereum blockchain.
 
-Catena Smart Contract
-Intended to take NRC public funding disclosures and store them on the Ethereum blockchain.
-
-Current contract software written to use the truffle framework.
+Built using the [Truffle Framework](http://truffleframework.com/).
 
 
 ## Usage
@@ -30,9 +28,8 @@ For more information on using a truffle contract see [Truffle Docs](http://truff
 
 ### Setup
 
-Install dependencies
-
-`npm install`
+- Install node dependencies: `npm install`
+- Install an ethereum node: [Parity](https://github.com/paritytech/parity) or [Geth](https://github.com/ethereum/go-ethereum)
 
 #### Parity
 
