@@ -4,6 +4,7 @@
   "description": "Ethereum smart contracts for Catena blockchain explorer",
   "main": "dist/bundle.min.js",
   "author": "Dylan Seago <dylan@bitaccess.co>",
+  "license": "MIT",
   "scripts": {
     "test": "truffle test",
     "compile": "bin/compile.js",
@@ -11,16 +12,9 @@
     "prepare": "npm run compile",
     "prepublishOnly": "npm run dist"
   },
-  "repository": {
-    "type": "git",
-    "url": "git@github.com:explorecatena/catena-contract.git"
+  "dependencies": {
+    "truffle-contract": "github:explorecatena/truffle-contract#split-tx-and-sync"
   },
-  "keywords": [
-    "catena",
-    "contract"
-  ],
-  "homepage": "https://github.com/explorecatena/catena-contract",
-  "license": "MIT",
   "peerDependencies": {
     "web3": "^0.20.2"
   },
@@ -49,7 +43,17 @@
     "webpack": "^3.8.1",
     "yargs": "^10.0.3"
   },
-  "dependencies": {
-    "truffle-contract": "github:explorecatena/truffle-contract#split-tx-and-sync"
-  }
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:explorecatena/catena-contract.git"
+  },
+  "bugs": {
+    "url": "https://github.com/explorecatena/catena-contract/issues"
+  },
+  "homepage": "https://github.com/explorecatena/catena-contract#readme",
+  "keywords": [
+    "catena",
+    "contract",
+    "ethereum"
+  ]
 }
