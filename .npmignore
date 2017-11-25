@@ -1,0 +1,10 @@
+.editorconfig
+.eslintrc.js
+/bin
+/test
+/build
+/contracts
+/migrations
+/package
+/truffle.js
+/index.js

@@ -1,0 +1,7 @@
+/.gtm/
+node_modules
+.DS_Store
+/package
+/dist
+/build
+*.bak

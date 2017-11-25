@@ -1,0 +1,41 @@
+[{
+    "organization": "TEST ORG",
+    "recipient": "COOL COMPANY",
+    "location": "TORONTO,ON,CA",
+    "amount": "CAD 488382",
+    "fundingType": "C",
+    "date": "2016-Q3",
+    "purpose": "NAICS:334110",
+    "comment": ""
+  },
+  {
+    "organization": "TEST ORG",
+    "recipient": "BITACCESS INC.",
+    "location": "OTTAWA,ON,CA",
+    "amount": "CAD 1234567",
+    "fundingType": "G",
+    "date": "2016-Q2",
+    "purpose": "NAICS:44231",
+    "comment": "MULTI_YEAR"
+  },
+  {
+    "organization": "EVEN BETTER ORG",
+    "recipient": "1929803 RANDOM NUMBERED CO",
+    "location": "VANCOUVER,BC,CA",
+    "amount": "CAD 99600",
+    "fundingType": "C",
+    "date": "2016-Q1",
+    "purpose": "NAICS:74472",
+    "comment": "MULTI_YEAR"
+  },
+  {
+    "organization": "EVEN BETTER ORG",
+    "recipient": "GRANDMAS COOKING INC",
+    "location": "DETROIT,MI,US",
+    "amount": "USD 150000",
+    "fundingType": "G",
+    "date": "2017-Q1",
+    "purpose": "NAICS:44235",
+    "comment": ""
+  }
+]

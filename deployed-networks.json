@@ -1,0 +1,26 @@
+{
+  "DisclosureManager": {
+    "1": {
+      "events": {},
+      "links": {},
+      "address": "0xff77e51f2c6473f72392865e0a0000de19af774a"
+    },
+    "3": {
+      "events": {},
+      "links": {},
+      "address": "0xb612d5deba65b928281a8c8572d915edcd6657ac"
+    }
+  },
+  "Migrations": {
+    "1": {
+      "events": {},
+      "links": {},
+      "address": "0xebe0ab68d460ded4d9c3f432498088563438f382"
+    },
+    "3": {
+      "events": {},
+      "links": {},
+      "address": "0x4da3e42c890de835d96a07cafd0a8403033b6ffa"
+    }
+  }
+}

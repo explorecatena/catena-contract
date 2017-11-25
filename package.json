@@ -1,0 +1,55 @@
+{
+  "name": "@catena/contract",
+  "version": "1.0.0",
+  "description": "Ethereum smart contracts for Catena blockchain explorer",
+  "main": "dist/bundle.min.js",
+  "author": "Dylan Seago <dylan@bitaccess.co>",
+  "scripts": {
+    "test": "truffle test",
+    "compile": "bin/compile.js",
+    "dist": "bin/dist.js",
+    "prepare": "npm run compile",
+    "prepublishOnly": "npm run dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:explorecatena/catena-contract.git"
+  },
+  "keywords": [
+    "catena",
+    "contract"
+  ],
+  "homepage": "https://github.com/explorecatena/catena-contract",
+  "license": "MIT",
+  "peerDependencies": {
+    "web3": "^0.20.2"
+  },
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-preset-env": "^1.6.1",
+    "bluebird": "^3.5.1",
+    "chai": "^4.1.2",
+    "eslint": "^4.10.0",
+    "eslint-config-airbnb-base": "^12.1.0",
+    "eslint-loader": "^1.9.0",
+    "eslint-plugin-chai-expect": "^1.1.1",
+    "eslint-plugin-import": "^2.8.0",
+    "eslint-plugin-mocha": "^4.11.0",
+    "ethereumjs-testrpc": "^4.1.3",
+    "fs-extra": "^4.0.2",
+    "glob": "^7.1.2",
+    "jsonfile": "^4.0.0",
+    "minimist": "^1.2.0",
+    "mocha": "^4.0.1",
+    "solc": "^0.4.18",
+    "truffle": "^4.0.1",
+    "web3": "^0.20.2",
+    "web3-provider-engine": "^13.3.3",
+    "webpack": "^3.8.1",
+    "yargs": "^10.0.3"
+  },
+  "dependencies": {
+    "truffle-contract": "github:cag/truffle-contract#split-tx-and-sync"
+  }
+}
