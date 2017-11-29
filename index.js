@@ -1,4 +1,4 @@
-const { promisify } = require('util');
+const promisify = require('es6-promisify');
 const truffleContract = require('truffle-contract');
 const disclosureManagerSpec = require('./build/contracts/DisclosureManager.json');
 

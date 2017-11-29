@@ -12,9 +12,6 @@
     "prepare": "npm run compile",
     "prepublishOnly": "npm run dist"
   },
-  "dependencies": {
-    "truffle-contract": "github:explorecatena/truffle-contract#split-tx-and-sync"
-  },
   "peerDependencies": {
     "web3": "^0.20.2"
   },
@@ -24,6 +21,7 @@
     "babel-preset-env": "^1.6.1",
     "bluebird": "^3.5.1",
     "chai": "^4.1.2",
+    "es6-promisify": "^5.0.0",
     "eslint": "^4.10.0",
     "eslint-config-airbnb-base": "^12.1.0",
     "eslint-loader": "^1.9.0",
@@ -38,6 +36,7 @@
     "mocha": "^4.0.1",
     "solc": "^0.4.18",
     "truffle": "^4.0.1",
+    "truffle-contract": "github:explorecatena/truffle-contract#split-tx-and-sync",
     "web3": "^0.20.2",
     "web3-provider-engine": "^13.3.3",
     "webpack": "^3.8.1",
