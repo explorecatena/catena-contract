@@ -1,6 +1,6 @@
 {
   "name": "@catena/contract",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Ethereum smart contracts for Catena blockchain explorer",
   "main": "dist/bundle.min.js",
   "author": "Dylan Seago <dylan@bitaccess.co>",
