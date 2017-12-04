@@ -9,10 +9,6 @@ function isNumeric(n) {
   return Number.isFinite(Number.parseFloat(n));
 }
 
-function strEq(s1, s2) {
-  return s1.valueOf() == s2; // eslint-disable-line eqeqeq
-}
-
 function init(web3, defaultOptions) {
   const DisclosureManager = truffleContract(disclosureManagerSpec);
   DisclosureManager.setProvider(web3.currentProvider || web3);
@@ -51,7 +47,7 @@ function init(web3, defaultOptions) {
   }
 
   function prepArgs(functionName, args) {
-    const { inputs } = disclosureManagerSpec.abi.find(f => strEq(functionName, f.name));
+    const { inputs } = disclosureManagerSpec.abi.find(f => functionName === f.name);
     return inputs.map(({ name, type }) => {
       const value = args[name];
       if (typeof value === 'undefined' || value === null) {
@@ -65,7 +61,7 @@ function init(web3, defaultOptions) {
     if (!(log && log.event && log.args)) {
       throw new Error(`Invalid log object: ${log}`);
     }
-    return strEq(log.event, NEW_ENTRY_EVENT_NAME);
+    return log.event === NEW_ENTRY_EVENT_NAME;
   }
 
   function resolveInstance(contract) {
@@ -76,7 +72,7 @@ function init(web3, defaultOptions) {
   }
 
   function parseDisclosureAddedEvent(event) {
-    if (!strEq(event.type, 'mined')) {
+    if (!event.type === 'mined') {
       throw new Error(`Tx logs for new entry event isn't mined. ${JSON.stringify({ event })}`);
     }
 
@@ -121,7 +117,7 @@ function init(web3, defaultOptions) {
     return resolveInstance(contractInstance)
       .then(instance => instance.owner()
         .then(owner => {
-          if (options.from && !strEq(options.from, owner)) {
+          if (options.from && !options.from === owner) {
             throw new Error(`Invalid 'from' address ${options.from}: ${contractName} is owned by ${owner}`);
           }
           options.from = owner;
@@ -135,7 +131,7 @@ function init(web3, defaultOptions) {
       .then(DisclosureManager.syncTransaction)
       .then(receipt => {
         const { tx, logs: txLogs } = receipt;
-        if (!tx || !txLogs || !strEq(tx, txId)) {
+        if (!tx || !txLogs || !tx === txId) {
           throw new Error(`Received invalid result when calling newEntry. ${JSON.stringify(receipt)}`);
         }
         const newEntryEvent = txLogs.find(isNewEntryEvent);
