@@ -50,6 +50,7 @@ contract('CatenaContract', ([account]) => {
       expect(CatenaContract.DisclosureManager).to.exist.and.be.a('function'); // [Function: TruffleContract]
       expect(CatenaContract.publishDisclosureTx).to.exist.and.be.a('function');
       expect(CatenaContract.publishDisclosure).to.exist.and.be.a('function');
+      expect(CatenaContract.syncPublishDisclosureTx).to.exist.and.be.a('function');
       expect(CatenaContract.watchDisclosureAdded).to.exist.and.be.a('function');
     });
   });
@@ -85,6 +86,23 @@ contract('CatenaContract', ([account]) => {
       ).then((txIds) => {
         expect(txIds).to.have.lengthOf(DISCLOSURE_COUNT);
       }));
+  });
+
+  describe('#syncPublishDisclosureTx()', () => {
+    it('should wait for transaction confirmation', () =>
+      CatenaContract.publishDisclosureTx(contractInstance, testDisclosures[0])
+        .then(CatenaContract.syncPublishDisclosureTx)
+        .then((result) => {
+          const {
+            txId, contractAddress, networkId, rowNumber, blockNumber, blockTimestamp,
+          } = result;
+          expect(txId).to.be.a('string').that.matches(txIdRegex);
+          expect(contractAddress).to.be.a('string').that.equals(contractInstance.address);
+          expect(networkId).to.be.a('string').that.equals(web3.version.network);
+          expect(rowNumber).to.be.a('number').that.above(0);
+          expect(blockNumber).to.be.a('number').that.is.above(0);
+          expect(blockTimestamp).to.be.a('number').that.is.above(0);
+        }));
   });
 
   describe('#watchDisclosureAdded()', () => {
