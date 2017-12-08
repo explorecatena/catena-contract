@@ -157,8 +157,8 @@ contract DisclosureManager {
 		// No event for pullEntry() since it shouldn't cost gas to call it
 	}
 
-	//Prevent payments to the contract
- 	 function () public payable {
-    	revert();
-  	}
+	// Prevent payments to the contract
+ 	function () public payable {
+    revert();
+  }
 }
