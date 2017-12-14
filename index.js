@@ -3,7 +3,6 @@ const truffleContract = require('truffle-contract');
 const disclosureManagerSpec = require('./build/contracts/DisclosureManager.json');
 
 const NEW_ENTRY_EVENT_NAME = 'disclosureAdded';
-const DEFAULT_GAS_LIMIT = 200000;
 
 function isNumeric(n) {
   return Number.isFinite(Number.parseFloat(n));
@@ -12,11 +11,7 @@ function isNumeric(n) {
 function init(web3, defaultOptions) {
   const DisclosureManager = truffleContract(disclosureManagerSpec);
   DisclosureManager.setProvider(web3.currentProvider || web3);
-
-  const defaults = Object.assign({
-    gas: DEFAULT_GAS_LIMIT,
-  }, defaultOptions);
-  DisclosureManager.defaults(defaults);
+  DisclosureManager.defaults(defaultOptions);
 
   const getBlock = promisify((numberOrHash, cb) => web3.eth.getBlock(numberOrHash, cb));
   const getNetwork = promisify(web3.version.getNetwork);
@@ -113,7 +108,14 @@ function init(web3, defaultOptions) {
     */
   function publishDisclosureTx(contractInstance, disclosureData, options = {}) {
     const { contractName } = DisclosureManager;
-    const argList = prepArgs('newEntry', disclosureData);
+    const args = Object.assign({}, disclosureData);
+    if (args.amends) {
+      args.rowNumber = args.amends;
+      delete args.amends;
+    }
+    const isAmendment = args.rowNumber;
+    const argList = prepArgs(isAmendment ? 'amendEntry' : 'newEntry', args);
+    options = Object.assign({ gas: isAmendment ? 450000 : 200000 }, options);
     return resolveInstance(contractInstance)
       .then(instance => instance.owner()
         .then(owner => {
@@ -123,7 +125,11 @@ function init(web3, defaultOptions) {
           options.from = owner;
           return instance;
         }))
-      .then(instance => instance.newEntry.sendTransaction(...argList, options));
+      .then(instance =>
+        (isAmendment
+          ? instance.amendEntry
+          : instance.newEntry)
+          .sendTransaction(...argList, options));
   }
 
   function syncPublishDisclosureTx(txId) {
