@@ -38,7 +38,6 @@
     "truffle": "^4.0.1",
     "truffle-contract": "github:explorecatena/truffle-contract#split-tx-and-sync",
     "web3": "^0.20.2",
-    "web3-provider-engine": "^13.3.3",
     "webpack": "^3.8.1",
     "yargs": "^10.0.3"
   },
