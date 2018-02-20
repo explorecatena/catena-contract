@@ -3,7 +3,7 @@ const GWEI = 1000000000;
 const defaults = {
   host: 'localhost',
   port: 8545,
-  gas: 4500000,
+  gas: 6000000,
   gasPrice: 5 * GWEI,
 };
 
