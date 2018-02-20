@@ -4,17 +4,23 @@ const disclosureManagerSpec = require('./build/contracts/DisclosureManager.json'
 
 const NEW_ENTRY_EVENT_NAME = 'disclosureAdded';
 
+const GAS_LIMIT_NEW_ENTRY = 250000;
+const GAS_LIMIT_AMEND_ENTRY = 500000;
+
 function isNumeric(n) {
   return Number.isFinite(Number.parseFloat(n));
 }
 
-function init(web3, defaultOptions) {
+const isNil = (x) => typeof x === 'undefined' || x === null;
+
+function init(web3, defaultOptions = {}) {
   const DisclosureManager = truffleContract(disclosureManagerSpec);
   DisclosureManager.setProvider(web3.currentProvider || web3);
   DisclosureManager.defaults(defaultOptions);
 
   const getBlock = promisify((numberOrHash, cb) => web3.eth.getBlock(numberOrHash, cb));
   const getNetwork = promisify(web3.version.getNetwork);
+  const { toHex } = web3;
 
   function prepBytes(str, len) {
     if (isNumeric(str)) {
@@ -45,7 +51,7 @@ function init(web3, defaultOptions) {
     const { inputs } = disclosureManagerSpec.abi.find(f => functionName === f.name);
     return inputs.map(({ name, type }) => {
       const value = args[name];
-      if (typeof value === 'undefined' || value === null) {
+      if (isNil(value)) {
         throw new Error(`Missing arg ${name} (${type}) for function ${functionName}, got ${JSON.stringify(args)}`);
       }
       return prepArg(type, args[name]);
@@ -96,6 +102,56 @@ function init(web3, defaultOptions) {
     }));
   }
 
+  function createPublishDisclosureArgs(contractInstance, disclosure, txOptions = {}) {
+    const { contractName } = DisclosureManager;
+    const { amends: amendsRow } = disclosure;
+    const isAmendment = !isNil(amendsRow);
+    if (isAmendment && !(typeof amendsRow === 'number' && amendsRow > 0)) {
+      return Promise.reject(new Error(`Invalid 'amends' row number ${amendsRow}: must be null, undefined, or a number > 0`));
+    }
+    const functionName = isAmendment ? 'amendEntry' : 'newEntry';
+    const args = prepArgs(functionName, Object.assign({ rowNumber: amendsRow }, disclosure));
+    return resolveInstance(contractInstance)
+      .then(instance => instance.owner()
+        .then(owner => {
+          if (txOptions.from && txOptions.from !== owner) {
+            throw new Error(`Invalid 'from' address ${txOptions.from}: ${contractName} is owned by ${owner}`);
+          }
+          return {
+            functionName,
+            args,
+            options: Object.assign({}, defaultOptions, {
+              from: owner,
+              gas: isAmendment ? GAS_LIMIT_AMEND_ENTRY : GAS_LIMIT_NEW_ENTRY,
+            }, txOptions),
+          };
+        }));
+  }
+
+  function createPublishDisclosureTx(contractInstance, disclosureData, txOptions = {}) {
+    return Promise.all([
+      resolveInstance(contractInstance),
+      createPublishDisclosureArgs(contractInstance, disclosureData, txOptions),
+    ]).then(([instance, { functionName, args, options }]) => Promise.all([
+      instance.contract[functionName].getData(...args),
+      instance.address,
+      options.from || instance.owner(),
+      options.gas || instance[functionName].estimateGas(...args),
+      options.gasPrice || web3.eth.getGasPrice(),
+      options.nonce || web3.eth.getTransactionCount(options.from),
+      getNetwork(),
+    ])).then(([data, to, from, gasLimit, gasPrice, nonce, networkId]) => ({
+      value: toHex(0),
+      data,
+      to,
+      from,
+      gasLimit: toHex(gasLimit),
+      gasPrice: toHex(gasPrice),
+      nonce: toHex(nonce),
+      chainId: Number.parseInt(networkId),
+    }));
+  }
+
   /**
     * Publish the provided disclosure to the DisclosureManager contract and resolve to txId after
     * transaction is sent.
@@ -106,30 +162,11 @@ function init(web3, defaultOptions) {
     *
     * @see https://github.com/trufflesuite/truffle-contract
     */
-  function publishDisclosureTx(contractInstance, disclosureData, options = {}) {
-    const { contractName } = DisclosureManager;
-    const args = Object.assign({}, disclosureData);
-    if (args.amends) {
-      args.rowNumber = args.amends;
-      delete args.amends;
-    }
-    const isAmendment = args.rowNumber;
-    const argList = prepArgs(isAmendment ? 'amendEntry' : 'newEntry', args);
-    options = Object.assign({ gas: isAmendment ? 450000 : 200000 }, options);
+  function publishDisclosureTx(contractInstance, disclosureData, txOptions = {}) {
     return resolveInstance(contractInstance)
-      .then(instance => instance.owner()
-        .then(owner => {
-          if (options.from && !options.from === owner) {
-            throw new Error(`Invalid 'from' address ${options.from}: ${contractName} is owned by ${owner}`);
-          }
-          options.from = owner;
-          return instance;
-        }))
-      .then(instance =>
-        (isAmendment
-          ? instance.amendEntry
-          : instance.newEntry)
-          .sendTransaction(...argList, options));
+      .then(instance => createPublishDisclosureArgs(instance, disclosureData, txOptions)
+        .then(({ functionName, args, options }) =>
+          instance[functionName].sendTransaction(...args, options)));
   }
 
   function syncPublishDisclosureTx(txId) {
@@ -159,8 +196,8 @@ function init(web3, defaultOptions) {
     *
     * @see https://github.com/trufflesuite/truffle-contract
     */
-  function publishDisclosure(contractInstance, disclosureData, options = {}) {
-    return publishDisclosureTx(contractInstance, disclosureData, options)
+  function publishDisclosure(contractInstance, disclosureData, txOptions = {}) {
+    return publishDisclosureTx(contractInstance, disclosureData, txOptions)
       .then(syncPublishDisclosureTx);
   }
 
@@ -183,6 +220,7 @@ function init(web3, defaultOptions) {
     publishDisclosureTx,
     syncPublishDisclosureTx,
     watchDisclosureAdded,
+    createPublishDisclosureTx,
   };
 }
 

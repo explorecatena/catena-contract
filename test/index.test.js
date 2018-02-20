@@ -3,6 +3,7 @@ if (!contract || !web3) {
   console.error('Error: Run tests using truffle test');
   process.exit(1);
 }
+const { toHex } = web3;
 
 global.Promise = require('bluebird');
 const { expect } = require('chai');
@@ -34,13 +35,11 @@ function sequentialPublish(publishFn, callback, startingValue = {}) {
   ).then(() => results);
 }
 
-contract('CatenaContract', ([account]) => {
-  const CatenaContract = init(web3, {
-    from: account,
-  });
+contract('CatenaContract', ([owner]) => {
+  const CatenaContract = init(web3);
   let contractInstance;
 
-  beforeEach(() => DisclosureManager.new().then(instance => {
+  beforeEach(() => DisclosureManager.new({ from: owner }).then(instance => {
     contractInstance = instance;
   }));
 
@@ -52,6 +51,7 @@ contract('CatenaContract', ([account]) => {
       expect(CatenaContract.publishDisclosure).to.exist.and.be.a('function');
       expect(CatenaContract.syncPublishDisclosureTx).to.exist.and.be.a('function');
       expect(CatenaContract.watchDisclosureAdded).to.exist.and.be.a('function');
+      expect(CatenaContract.createPublishDisclosureTx).to.exist.and.be.a('function');
     });
   });
 
@@ -124,5 +124,64 @@ contract('CatenaContract', ([account]) => {
           eventWatcher.stopWatching();
         }));
     });
+  });
+
+  describe('#createPublishDisclosureTx()', () => {
+    const organization = 'TEST ORG';
+    const recipient = 'BITACCESS INC.';
+    const location = 'OTTAWA,ON,CA';
+    const amount = 'CAD 1234567';
+    const fundingType = 'G';
+    const date = '2016-Q2';
+    const purpose = 'NAICS:44231';
+    const comment = 'MULTI_YEAR';
+    const disclosure = {
+      organization, recipient, location, amount, fundingType, date, purpose, comment,
+    };
+    const orderedArgs = [
+      organization, recipient, location, amount, fundingType, date, purpose, comment,
+    ];
+    const txOptions = {
+      nonce: 3,
+      gas: 288888,
+      gasPrice: 686868,
+    };
+    const partialExpectedTx = {
+      value: toHex(0),
+      from: owner,
+      gasLimit: toHex(txOptions.gas),
+      gasPrice: toHex(txOptions.gasPrice),
+      nonce: toHex(txOptions.nonce),
+      chainId: Number.parseInt(web3.version.network),
+    };
+    it('should creact correct newEntry tx', () =>
+      CatenaContract.createPublishDisclosureTx(contractInstance, disclosure, txOptions)
+        .then(tx => {
+          expect(tx).to.deep.equals(Object.assign({}, partialExpectedTx, {
+            to: contractInstance.address,
+            data: contractInstance.contract.newEntry.getData(...orderedArgs),
+          }));
+        }));
+    it('should create correct amendEntry tx', () => {
+      const amendsRow = 343;
+      return CatenaContract.createPublishDisclosureTx(
+        contractInstance,
+        Object.assign({ amends: amendsRow }, disclosure),
+        txOptions,
+      ).then(tx => {
+        expect(tx).to.deep.equals(Object.assign({}, partialExpectedTx, {
+          to: contractInstance.address,
+          data: contractInstance.contract.amendEntry.getData(amendsRow, ...orderedArgs),
+        }));
+      });
+    });
+    it('should reject invalid amends row number', () =>
+      CatenaContract.createPublishDisclosureTx(
+        contractInstance,
+        Object.assign({ amends: -1 }, disclosure),
+        txOptions,
+      ).catch(e => e).then((result) => {
+        expect(result).to.be.an('error');
+      }));
   });
 });
