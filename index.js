@@ -102,6 +102,22 @@ function init(web3, defaultOptions = {}) {
     }));
   }
 
+  function createPublishTxReceiptHandler(txId) {
+    return (receipt) => Promise.resolve()
+      .then(() => {
+        const { tx, logs: txLogs } = receipt;
+        if (!tx || !txLogs || !tx === txId) {
+          throw new Error(`Received invalid result when calling newEntry. ${JSON.stringify(receipt)}`);
+        }
+        const newEntryEvent = txLogs.find(isNewEntryEvent);
+        if (!newEntryEvent) {
+          throw new Error(`Could not find new entry event in transaction receipt logs. ${JSON.stringify({ txId, txLogs })}`);
+        }
+        return txLogs[0];
+      })
+      .then(parseDisclosureAddedEvent);
+  }
+
   function createPublishDisclosureArgs(contractInstance, disclosure, txOptions = {}) {
     const { contractName } = DisclosureManager;
     const { amends: amendsRow } = disclosure;
@@ -169,21 +185,16 @@ function init(web3, defaultOptions = {}) {
           instance[functionName].sendTransaction(...args, options)));
   }
 
+  function getPublishDisclosureTx(txId) {
+    return Promise.resolve(txId)
+      .then(DisclosureManager.getTransaction)
+      .then(createPublishTxReceiptHandler(txId));
+  }
+
   function syncPublishDisclosureTx(txId) {
     return Promise.resolve(txId)
       .then(DisclosureManager.syncTransaction)
-      .then(receipt => {
-        const { tx, logs: txLogs } = receipt;
-        if (!tx || !txLogs || !tx === txId) {
-          throw new Error(`Received invalid result when calling newEntry. ${JSON.stringify(receipt)}`);
-        }
-        const newEntryEvent = txLogs.find(isNewEntryEvent);
-        if (!newEntryEvent) {
-          throw new Error(`Could not find new entry event in transaction receipt logs. ${JSON.stringify({ txId, txLogs })}`);
-        }
-        return txLogs[0];
-      })
-      .then(parseDisclosureAddedEvent);
+      .then(createPublishTxReceiptHandler(txId));
   }
 
   /**
@@ -218,6 +229,7 @@ function init(web3, defaultOptions = {}) {
     DisclosureManager,
     publishDisclosure,
     publishDisclosureTx,
+    getPublishDisclosureTx,
     syncPublishDisclosureTx,
     watchDisclosureAdded,
     createPublishDisclosureTx,
