@@ -102,16 +102,16 @@ function init(web3, defaultOptions = {}) {
     }));
   }
 
-  function createPublishTxReceiptHandler(txId) {
-    return (receipt) => Promise.resolve()
+  function handlePublishTxReceipt(expectedTxId, receipt) {
+    return Promise.resolve()
       .then(() => {
         const { tx, logs: txLogs } = receipt;
-        if (!tx || !txLogs || !tx === txId) {
-          throw new Error(`Received invalid result when calling newEntry. ${JSON.stringify(receipt)}`);
+        if (!tx || !txLogs || tx !== expectedTxId) {
+          throw new Error(`Received invalid publish tx receipt. ${JSON.stringify(receipt)}`);
         }
         const newEntryEvent = txLogs.find(isNewEntryEvent);
         if (!newEntryEvent) {
-          throw new Error(`Could not find new entry event in transaction receipt logs. ${JSON.stringify({ txId, txLogs })}`);
+          throw new Error(`Could not find new entry event in transaction receipt logs. ${JSON.stringify({ txId: tx, txLogs })}`);
         }
         return txLogs[0];
       })
@@ -188,13 +188,18 @@ function init(web3, defaultOptions = {}) {
   function getPublishDisclosureTx(txId) {
     return Promise.resolve(txId)
       .then(DisclosureManager.getTransaction)
-      .then(createPublishTxReceiptHandler(txId));
+      .then(receipt => {
+        if (!receipt) {
+          return receipt;
+        }
+        return handlePublishTxReceipt(txId, receipt);
+      });
   }
 
   function syncPublishDisclosureTx(txId) {
     return Promise.resolve(txId)
       .then(DisclosureManager.syncTransaction)
-      .then(createPublishTxReceiptHandler(txId));
+      .then(receipt => handlePublishTxReceipt(txId, receipt));
   }
 
   /**
