@@ -103,7 +103,7 @@ function init (web3, defaultOptions = {}) {
       .then(() => {
         const { tx: txId, logs: txLogs } = tx
         if (!txId || !txLogs || txId !== expectedTxId) {
-          throw new Error(`Received invalid publish tx receipt. ${JSON.stringify(receipt)}`)
+          throw new Error(`Received invalid publish tx. ${JSON.stringify(tx)}`)
         }
         const newEntryEvent = txLogs.find(isNewEntryEvent)
         if (!newEntryEvent) {
