@@ -87,22 +87,23 @@ contract DisclosureAgreementTracker {
         return latestMap[disclosureIndex].agreementCount != 0;
     }
 
-    function _isAgreementSigned(Agreement agreement)
+    function _isAgreementFullySigned(Agreement agreement)
     private pure returns(bool) {
         return agreement.signedCount == agreement.signatories.length;
     }
 
     /** Return true if the agreement exists and is fully signed */
-    function isAgreementSigned(bytes32 agreementHash)
+    function isAgreementFullySigned(bytes32 agreementHash)
     public view returns(bool) {
         Agreement storage agreement = agreementMap[agreementHash];
-        return _agreementExists(agreement) && _isAgreementSigned(agreement);
+        return _agreementExists(agreement)
+            && _isAgreementFullySigned(agreement);
     }
 
     /** Return true if disclosures latest agreement is fully signed. */
-    function isDisclosureSigned(uint disclosureIndex)
+    function isDisclosureFullySigned(uint disclosureIndex)
     public view returns(bool) {
-        return isAgreementSigned(
+        return isAgreementFullySigned(
             latestMap[disclosureIndex].agreementHash
         );
     }
@@ -146,24 +147,25 @@ contract DisclosureAgreementTracker {
      * Returns true if signature applied, false if not a signatory or already
      * signed.
      */
-    function signAgreement(bytes32 agreementHash) public returns(bool signed) {
+    function signAgreement(bytes32 agreementHash) public {
         require(agreementExists(agreementHash), "agreeement must exist");
+
         Agreement storage agreement = agreementMap[agreementHash];
-        signed = agreement.requiredSignatures[msg.sender];
-        if (signed) {
-            agreement.requiredSignatures[msg.sender] = false;
-            agreement.signedCount++;
+        bool signed = agreement.requiredSignatures[msg.sender];
+        require(signed, "sender already signed or not a signatory");
 
-            emit agreementSigned(
+        agreement.requiredSignatures[msg.sender] = false;
+        agreement.signedCount++;
+
+        emit agreementSigned(
+            agreementHash,
+            agreement.disclosureIndex,
+            msg.sender);
+
+        if (_isAgreementFullySigned(agreement)) {
+            emit agreementFullySigned(
                 agreementHash,
-                agreement.disclosureIndex,
-                msg.sender);
-
-            if (_isAgreementSigned(agreement)) {
-                emit agreementFullySigned(
-                    agreementHash,
-                    agreement.disclosureIndex);
-            }
+                agreement.disclosureIndex);
         }
     }
 
