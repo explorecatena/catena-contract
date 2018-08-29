@@ -1,4 +1,4 @@
-pragma solidity 0.4.18;
+pragma solidity 0.4.24;
 
 // This contract provides the functions necessary to record ("push") & retrieve
 // public funding data to the Ethereum blockchain for the National Research
@@ -33,7 +33,7 @@ contract DisclosureManager {
     bytes32 purpose,
     bytes32 comment);
 
-  function DisclosureManager() public {
+  constructor() public {
     owner = msg.sender;
   }
 
@@ -85,7 +85,7 @@ contract DisclosureManager {
     index = index - 1;
 
     // Record the event
-    disclosureAdded(index, organization, recipient, location, amount, fundingType, date, purpose, comment);
+    emit disclosureAdded(index, organization, recipient, location, amount, fundingType, date, purpose, comment);
 
     return index;   // returning rowNumber of the record
   }
@@ -128,7 +128,7 @@ contract DisclosureManager {
     disclosureList[rowNumber].amended = index;
 
     // Record the event
-    disclosureAdded(index, organization, recipient, location, amount, fundingType, date, purpose, comment);   // a different event for amending?
+    emit disclosureAdded(index, organization, recipient, location, amount, fundingType, date, purpose, comment);   // a different event for amending?
 
     return index;   // returning rowNumber of the new record
   }
