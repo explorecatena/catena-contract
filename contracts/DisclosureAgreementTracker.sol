@@ -86,7 +86,7 @@ contract DisclosureAgreementTracker {
     function hasAgreement(uint disclosureIndex) public view returns(bool) {
         return latestMap[disclosureIndex].agreementCount != 0;
     }
-    
+
     function _isAgreementFullySigned(Agreement agreement)
     private pure returns(bool) {
         return agreement.signedCount == agreement.signatories.length;
@@ -99,7 +99,7 @@ contract DisclosureAgreementTracker {
         return _agreementExists(agreement)
             && _isAgreementFullySigned(agreement);
     }
-    
+
     /** Return true if disclosures latest agreement is fully signed. */
     function isDisclosureFullySigned(uint disclosureIndex)
     public view returns(bool) {
@@ -156,12 +156,12 @@ contract DisclosureAgreementTracker {
 
         agreement.requiredSignatures[msg.sender] = false;
         agreement.signedCount++;
-        
+
         emit agreementSigned(
             agreementHash,
             agreement.disclosureIndex,
             msg.sender);
-            
+
         if (_isAgreementFullySigned(agreement)) {
             emit agreementFullySigned(
                 agreementHash,
