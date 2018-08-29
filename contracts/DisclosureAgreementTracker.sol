@@ -1,5 +1,10 @@
 pragma solidity 0.4.24;
 
+/**
+ * This contract is used to publish hashed contribution agreements for disclosures
+ * already published in the DisclosureManager contract. These agreements require
+ * multi party sign off which this contract facilitates.
+ */
 contract DisclosureAgreementTracker {
 
     /**
