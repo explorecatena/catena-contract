@@ -12,6 +12,10 @@
     "prepare": "npm run compile",
     "prepublishOnly": "npm run dist"
   },
+  "engines": {
+    "node": "8",
+    "npm": "6"
+  },
   "dependencies": {
     "truffle": "^4.1.14"
   },
