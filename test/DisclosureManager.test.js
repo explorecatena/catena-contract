@@ -12,32 +12,35 @@ const FIELD_NAMES = [
 ];
 
 // tests
-contract('DisclosureManager_jstests', () => {
-  DisclosureManager.new()
-    .then((instance) => {
-      // getListCount test
-      it('Should count an empty set of records correctly', () =>
-        instance.getListCount()
-          .then((count) => assert.equal(count.valueOf(), 0, 'getListCount was not zero')));
+contract('DisclosureManager', () => {
+  let instance;
 
-      // newEntry test
-      it('Should push data successfully', () =>
-        instance.newEntry(...TEST_ENTRY)
-          .then((txData) => {
-            // assert.isAtLeast(rowNumber.valueOf(), 0, 'rowNumber returned was not above zero');
-            assert.equal(txData.receipt.transactionIndex.valueOf(), 0, 'newEntry transaction was not successful'); // is transactionIndex the returned rowNumber?  **** mainnet returned 8 instead of 0!!
-          }));
+  before(() => DisclosureManager.new().then(contractInstance => {
+    instance = contractInstance;
+  }));
 
-      // getListCount test
-      it('Should count newly created record', () =>
-        instance.getListCount()
-          .then((rowNumber) => assert.equal(rowNumber.valueOf(), 1, 'getListCount was not 1')));
+  // getListCount test
+  it('Should count an empty set of records correctly', () =>
+    instance.getListCount()
+      .then((count) => assert.equal(count.valueOf(), 0, 'getListCount was not zero')));
 
-      // pullEntry test
-      it('Should pull data successfully', () =>
-        instance.pullEntry(1)
-          .then((txData) =>
-            txData.forEach((data, i) =>
-              assert.equal(parseTxBytes(data), TEST_ENTRY[i], `${FIELD_NAMES[i]} field was not correct`))));
-    });
+  // newEntry test
+  it('Should push data successfully', () =>
+    instance.newEntry(...TEST_ENTRY)
+      .then((txData) => {
+        // assert.isAtLeast(rowNumber.valueOf(), 0, 'rowNumber returned was not above zero');
+        assert.equal(txData.receipt.transactionIndex.valueOf(), 0, 'newEntry transaction was not successful'); // is transactionIndex the returned rowNumber?  **** mainnet returned 8 instead of 0!!
+      }));
+
+  // getListCount test
+  it('Should count newly created record', () =>
+    instance.getListCount()
+      .then((rowNumber) => assert.equal(rowNumber.valueOf(), 1, 'getListCount was not 1')));
+
+  // pullEntry test
+  it('Should pull data successfully', () =>
+    instance.pullEntry(1)
+      .then((txData) =>
+        txData.forEach((data, i) =>
+          assert.equal(parseTxBytes(data), TEST_ENTRY[i], `${FIELD_NAMES[i]} field was not correct`))));
 });
