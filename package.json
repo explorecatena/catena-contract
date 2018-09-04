@@ -12,6 +12,9 @@
     "prepare": "npm run compile",
     "prepublishOnly": "npm run dist"
   },
+  "dependencies": {
+    "truffle": "^4.1.14"
+  },
   "peerDependencies": {
     "web3": "^0.20.2"
   },
@@ -55,8 +58,5 @@
     "catena",
     "contract",
     "ethereum"
-  ],
-  "dependencies": {
-    "truffle": "^4.1.14"
-  }
+  ]
 }
