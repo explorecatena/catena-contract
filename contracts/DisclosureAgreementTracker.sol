@@ -36,8 +36,14 @@ contract DisclosureAgreementTracker {
     /** Contract creator */
     address public owner;
 
-    /** Address of the DisclosureManager contract this tracks agreements for */
+    /** Address of the DisclosureManager contract these agreements apply to */
     address public disclosureManager;
+
+    /** Total agreements tracked */
+    uint public agreementCount;
+
+    /** Total disclosures with agreements */
+    uint public disclosureCount;
 
     /** Map of agreements by contract sha256 hash */
     mapping(bytes32 => Agreement) public agreementMap;
@@ -82,9 +88,13 @@ contract DisclosureAgreementTracker {
         return _agreementExists(agreementMap[agreementHash]);
     }
 
+    function _hasAgreement(Latest latest) private pure returns(bool) {
+        return latest.agreementCount != 0;
+    }
+
     /** Return true if the disclosure has an agreement */
     function hasAgreement(uint disclosureIndex) public view returns(bool) {
-        return latestMap[disclosureIndex].agreementCount != 0;
+        return _hasAgreement(latestMap[disclosureIndex]);
     }
 
     function _isAgreementFullySigned(Agreement agreement)
@@ -123,10 +133,17 @@ contract DisclosureAgreementTracker {
         require(signatories.length > 0, "signatories must not be empty");
 
         Agreement storage agreement = agreementMap[agreementHash];
+        if (_agreementExists(agreement)) {
+            revert("Agreement already exists");
+        }
+        agreementCount++;
         agreement.disclosureIndex = disclosureIndex;
         agreement.signatories = signatories;
 
         Latest storage latest = latestMap[disclosureIndex];
+        if (!_hasAgreement(latest)) {
+            disclosureCount++;
+        }
         agreement.previous = latest.agreementHash;
         latest.agreementHash = agreementHash;
         latest.agreementCount++;
@@ -138,7 +155,7 @@ contract DisclosureAgreementTracker {
             }
             agreement.requiredSignatures[signatory] = true;
         }
-
+        
         emit agreementAdded(agreementHash, disclosureIndex, signatories);
     }
 
