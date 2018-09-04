@@ -1,6 +1,7 @@
 const promisify = require('es6-promisify')
 const truffleContract = require('truffle-contract')
 const disclosureManagerSpec = require('./build/contracts/DisclosureManager.json')
+const agreementTrackerSpec = require('./build/contracts/DisclosureAgreementTracker.json')
 
 const NEW_ENTRY_EVENT_NAME = 'disclosureAdded'
 
@@ -14,9 +15,13 @@ function isNumeric (n) {
 const isNil = (x) => typeof x === 'undefined' || x === null
 
 function init (web3, defaultOptions = {}) {
+  const web3Provider = web3.currentProvider || web3
   const DisclosureManager = truffleContract(disclosureManagerSpec)
-  DisclosureManager.setProvider(web3.currentProvider || web3)
+  DisclosureManager.setProvider(web3Provider)
   DisclosureManager.defaults(defaultOptions)
+  const DisclosureAgreementTracker = truffleContract(agreementTrackerSpec)
+  DisclosureAgreementTracker.setProvider(web3Provider)
+  DisclosureAgreementTracker.defaults(defaultOptions)
 
   const getBlock = promisify((numberOrHash, cb) => web3.eth.getBlock(numberOrHash, cb))
   const getNetwork = promisify(web3.version.getNetwork)
@@ -47,8 +52,8 @@ function init (web3, defaultOptions = {}) {
     return value
   }
 
-  function prepArgs (functionName, args) {
-    const { inputs } = disclosureManagerSpec.abi.find(f => functionName === f.name)
+  function prepArgs (spec, functionName, args) {
+    const { inputs } = spec.abi.find(f => functionName === f.name)
     return inputs.map(({ name, type }) => {
       const value = args[name]
       if (isNil(value)) {
@@ -122,7 +127,7 @@ function init (web3, defaultOptions = {}) {
       return Promise.reject(new Error(`Invalid 'amends' row number ${amendsRow}: must be null, undefined, or a number > 0`))
     }
     const functionName = isAmendment ? 'amendEntry' : 'newEntry'
-    const args = prepArgs(functionName, Object.assign({ rowNumber: amendsRow }, disclosure))
+    const args = prepArgs(disclosureManagerSpec, functionName, Object.assign({ rowNumber: amendsRow }, disclosure))
     return resolveInstance(contractInstance)
       .then(instance => instance.owner()
         .then(owner => {
@@ -226,14 +231,51 @@ function init (web3, defaultOptions = {}) {
       }))
   }
 
+  function getAgreement (contractInstance, agreementHash) {
+    return resolveInstance(contractInstance).then(instance => {
+      const args = prepArgs(agreementTrackerSpec, 'agreementMap', [agreementHash])
+      return instance.agreementMap(agreementHash)
+        .then(agreement => {
+          console.log('getAgreement', agreement)
+          return agreement
+        })
+    })
+  }
+
+  function addAgreement (contractInstance, agreementHash, disclosureIndex, signatories) {
+    return resolveInstance(contractInstance).then(instance => {
+      const args = prepArgs(agreementTrackerSpec, 'addAgreement', [agreementHash, disclosureIndex, signatories])
+      return instance.addAgreement(...args)
+        .then(agreement => {
+          console.log('addAgreement', agreement)
+          return agreement
+        })
+    })
+  }
+
+  function signAgreement (contractInstance, agreementHash) {
+    return resolveInstance(contractInstance).then(instance => {
+      const args = prepArgs(agreementTrackerSpec, 'signAgreement', [agreementHash])
+      return instance.signAgreement(...args)
+        .then(agreement => {
+          console.log('signAgreement', agreement)
+          return agreement
+        })
+    })
+  }
+
   return {
     DisclosureManager,
+    DisclosureAgreementTracker,
     publishDisclosure,
     publishDisclosureTx,
     getPublishDisclosureTx,
     syncPublishDisclosureTx,
     watchDisclosureAdded,
-    createPublishDisclosureTx
+    createPublishDisclosureTx,
+    getAgreement,
+    addAgreement,
+    signAgreement,
   }
 }
 
