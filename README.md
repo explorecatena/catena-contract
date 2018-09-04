@@ -1,4 +1,9 @@
 # Catena Smart Contract
+
+
+[![npm (scoped)](https://img.shields.io/npm/v/@catena/contract.svg)](https://www.npmjs.com/package/@catena/contract)
+[![Build Status](https://travis-ci.org/explorecatena/catena-contract.svg?branch=master)](https://travis-ci.org/explorecatena/catena-contract)
+
 Used to publish NRC public funding disclosures and on the Ethereum blockchain.
 
 Built using the [Truffle Framework](http://truffleframework.com/).
