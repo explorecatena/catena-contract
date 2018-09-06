@@ -209,7 +209,7 @@ function CatenaContract (web3, disclosureManagerContract, agreementTrackerContra
     * @see https://github.com/trufflesuite/truffle-contract
     */
   function publishDisclosureTx (disclosureData, txOptions = {}) {
-    return disclosureManagerPromise.then(disclosureManager => 
+    return disclosureManagerPromise.then(disclosureManager =>
       createPublishDisclosureArgs(disclosureManager, disclosureData, txOptions)
         .then(({ functionName, args, options }) =>
           disclosureManager[functionName].sendTransaction(...args, options)))
@@ -246,7 +246,7 @@ function CatenaContract (web3, disclosureManagerContract, agreementTrackerContra
   }
 
   function watchDisclosureAdded (callback) {
-    return disclosureManagerPromise.then(disclosureManager => 
+    return disclosureManagerPromise.then(disclosureManager =>
       disclosureManager.disclosureAdded().watch((err, event) => {
         if (err) {
           console.error(err)
