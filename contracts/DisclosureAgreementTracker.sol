@@ -79,22 +79,22 @@ contract DisclosureAgreementTracker {
         _;
     }
 
-    function _agreementExists(Agreement agreement) private pure returns(bool) {
+    function _hasAgreement(Agreement agreement) private pure returns(bool) {
         return agreement.disclosureIndex != 0;
     }
 
     /** Return true if the agreement exists */
-    function agreementExists(bytes32 agreementHash) public view returns(bool) {
-        return _agreementExists(agreementMap[agreementHash]);
+    function hasAgreement(bytes32 agreementHash) public view returns(bool) {
+        return _hasAgreement(agreementMap[agreementHash]);
     }
 
-    function _hasAgreement(Latest latest) private pure returns(bool) {
+    function _hasDisclosureAgreement(Latest latest) private pure returns(bool) {
         return latest.agreementCount != 0;
     }
 
     /** Return true if the disclosure has an agreement */
-    function hasAgreement(uint disclosureIndex) public view returns(bool) {
-        return _hasAgreement(latestMap[disclosureIndex]);
+    function hasDisclosureAgreement(uint disclosureIndex) public view returns(bool) {
+        return _hasDisclosureAgreement(latestMap[disclosureIndex]);
     }
 
     function _isAgreementFullySigned(Agreement agreement)
@@ -106,7 +106,7 @@ contract DisclosureAgreementTracker {
     function isAgreementFullySigned(bytes32 agreementHash)
     public view returns(bool) {
         Agreement storage agreement = agreementMap[agreementHash];
-        return _agreementExists(agreement)
+        return _hasAgreement(agreement)
             && _isAgreementFullySigned(agreement);
     }
 
@@ -116,6 +116,35 @@ contract DisclosureAgreementTracker {
         return isAgreementFullySigned(
             latestMap[disclosureIndex].agreementHash
         );
+    }
+    
+    /**
+     * Get the Agreement requiredSignatures map as an array of bools parallel
+     * to its signatories array.
+     */
+    function _getRequiredSignaturesArray(Agreement storage agreement)
+    private view returns (bool[]) {
+        address[] storage signatories = agreement.signatories;
+        bool[] memory requiredSignatureArray = new bool[](signatories.length);
+        for (uint i = 0; i < signatories.length; i++) {
+            address signatory = signatories[i];
+            requiredSignatureArray[i] = agreement.requiredSignatures[signatory];
+        }
+        return requiredSignatureArray;
+    }
+
+    /** Get the agreement with the provided hash */
+    function getAgreement(bytes32 agreementHash)
+    public view returns(
+        bytes32 previous, uint disclosureIndex, uint signedCount,
+        address[] signatories, bool[] requiredSignatures
+    ) {
+        Agreement storage agreement = agreementMap[agreementHash];
+        previous = agreement.previous;
+        disclosureIndex = agreement.disclosureIndex;
+        signedCount = agreement.signedCount;
+        signatories = agreement.signatories;
+        requiredSignatures = _getRequiredSignaturesArray(agreement);
     }
 
     /**
@@ -133,7 +162,7 @@ contract DisclosureAgreementTracker {
         require(signatories.length > 0, "signatories must not be empty");
 
         Agreement storage agreement = agreementMap[agreementHash];
-        if (_agreementExists(agreement)) {
+        if (_hasAgreement(agreement)) {
             revert("Agreement already exists");
         }
         agreementCount++;
@@ -141,7 +170,7 @@ contract DisclosureAgreementTracker {
         agreement.signatories = signatories;
 
         Latest storage latest = latestMap[disclosureIndex];
-        if (!_hasAgreement(latest)) {
+        if (!_hasDisclosureAgreement(latest)) {
             disclosureCount++;
         }
         agreement.previous = latest.agreementHash;
@@ -165,7 +194,7 @@ contract DisclosureAgreementTracker {
      * signed.
      */
     function signAgreement(bytes32 agreementHash) public {
-        require(agreementExists(agreementHash), "agreeement must exist");
+        require(hasAgreement(agreementHash), "agreeement must exist");
 
         Agreement storage agreement = agreementMap[agreementHash];
         bool signed = agreement.requiredSignatures[msg.sender];
