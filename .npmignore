@@ -1,5 +1,6 @@
 .editorconfig
 .eslintrc.js
+.travis.yml
 /bin
 /test
 /build
