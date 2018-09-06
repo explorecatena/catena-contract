@@ -1,5 +1,11 @@
 {
-  "DisclosureAgreementTracker": {},
+  "DisclosureAgreementTracker": {
+    "3": {
+      "events": {},
+      "links": {},
+      "address": "0x1587be31c12d5bfe729d717ace03c1fac3655717"
+    }
+  },
   "DisclosureManager": {
     "1": {
       "events": {},
