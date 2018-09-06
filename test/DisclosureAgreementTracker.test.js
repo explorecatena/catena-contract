@@ -16,7 +16,7 @@ contract('DisclosureAgreementTracker', ([address1, address2, address3]) => {
 
   const TEST_AGREEMENT = [
     TEST_HASH,
-    '1',
+    1,
     [address1, address2],
   ]
 
@@ -52,12 +52,14 @@ contract('DisclosureAgreementTracker', ([address1, address2, address3]) => {
   it('Should get newly created agreement', () =>
     instance.getAgreement(TEST_HASH)
       .then((result) => {
-        expect(result).to.have.length(5)
-        expect(result[0]).to.be.a('string').and.equal(NULL_BYTES) // agreement.previous
-        expect(result[1].toString()).to.equal(TEST_AGREEMENT[1]) // agreement.disclosureIndex
-        expect(result[2].toString()).to.equal('0') // agreement.signedCount
-        expect(result[3]).to.deep.equal(TEST_AGREEMENT[2])
-        expect(result[4]).to.deep.equal([true, true])
+        expect(result).to.have.length(6)
+        const [previous, disclosureIndex, blockNumber, signedCount, signatories, requiredSignatures] = result
+        expect(previous).to.be.a('string').and.equal(NULL_BYTES)
+        expect(disclosureIndex.toNumber()).to.equal(TEST_AGREEMENT[1])
+        expect(blockNumber.toNumber()).to.be.above(0)
+        expect(signedCount.toNumber()).to.equal(0)
+        expect(signatories).to.deep.equal(TEST_AGREEMENT[2])
+        expect(requiredSignatures).to.deep.equal([true, true])
       }))
   
   it('Should add first signature', () =>
@@ -71,9 +73,10 @@ contract('DisclosureAgreementTracker', ([address1, address2, address3]) => {
   it('Should count first signature', () =>
     instance.getAgreement(TEST_HASH)
       .then((result) => {
-        expect(result).to.have.length(5)
-        expect(result[2].toString()).to.equal('1')
-        expect(result[4]).to.deep.equal([false, true])
+        expect(result).to.have.length(6)
+        const [previous, disclosureIndex, blockNumber, signedCount, signatories, requiredSignatures] = result
+        expect(signedCount.toNumber()).to.equal(1)
+        expect(requiredSignatures).to.deep.equal([false, true])
       }))
 
   it('Should fail with invalid signature', () =>

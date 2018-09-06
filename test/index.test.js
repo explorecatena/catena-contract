@@ -221,10 +221,12 @@ contract('CatenaContract', ([owner, address1, address2]) => {
     it('should get agreement', () =>
       catenaContract.getAgreement(TEST_HASH)
         .then((result) => {
+          expect(result.blockNumber).to.be.above(0)
           expect(result).to.deep.equals({
             previous: NULL_BYTES,
             disclosureIndex: 1,
             signedCount: 0,
+            blockNumber: result.blockNumber,
             signatories: TEST_AGREEMENT[2],
             requiredSignatures: {
               [address1]: true,

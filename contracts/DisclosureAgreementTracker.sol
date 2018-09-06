@@ -16,6 +16,8 @@ contract DisclosureAgreementTracker {
         bytes32 previous;
         // index of the disclosure in disclosureManager
         uint disclosureIndex;
+        // block this agreement was created in
+        uint blockNumber;
         // total signatures obtained so far
         uint signedCount;
         // addresses from which signatures are required
@@ -136,12 +138,13 @@ contract DisclosureAgreementTracker {
     /** Get the agreement with the provided hash */
     function getAgreement(bytes32 agreementHash)
     public view returns(
-        bytes32 previous, uint disclosureIndex, uint signedCount,
-        address[] signatories, bool[] requiredSignatures
+        bytes32 previous, uint disclosureIndex, uint blockNumber,
+        uint signedCount, address[] signatories, bool[] requiredSignatures
     ) {
         Agreement storage agreement = agreementMap[agreementHash];
         previous = agreement.previous;
         disclosureIndex = agreement.disclosureIndex;
+        blockNumber = agreement.blockNumber;
         signedCount = agreement.signedCount;
         signatories = agreement.signatories;
         requiredSignatures = _getRequiredSignaturesArray(agreement);
@@ -167,6 +170,7 @@ contract DisclosureAgreementTracker {
         }
         agreementCount++;
         agreement.disclosureIndex = disclosureIndex;
+        agreement.blockNumber = block.number;
         agreement.signatories = signatories;
 
         Latest storage latest = latestMap[disclosureIndex];

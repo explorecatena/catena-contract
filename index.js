@@ -258,13 +258,16 @@ function CatenaContract (web3, disclosureManagerContract, agreementTrackerContra
       }))
   }
 
-  const getAgreement = wrapCall(agreementTrackerPromise, 'getAgreement', (result) => ({
-    previous: result[0],
-    disclosureIndex: result[1].toNumber(),
-    signedCount: result[2].toNumber(),
-    signatories: result[3],
-    requiredSignatures: result[3].reduce((byAddress, address, i) => Object.assign(byAddress, {
-      [address]: result[4][i],
+  const getAgreement = wrapCall(agreementTrackerPromise, 'getAgreement', ([
+    previous, disclosureIndex, blockNumber, signedCount, signatories, requiredSignatures,
+  ]) => ({
+    previous,
+    disclosureIndex: disclosureIndex.toNumber(),
+    blockNumber: blockNumber.toNumber(),
+    signedCount: signedCount.toNumber(),
+    signatories: signatories,
+    requiredSignatures: signatories.reduce((byAddress, address, i) => Object.assign(byAddress, {
+      [address]: requiredSignatures[i],
     }), {})
   }))
 
