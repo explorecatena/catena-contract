@@ -204,4 +204,57 @@ contract('CatenaContract', ([owner, address1, address2]) => {
         }))
     })
   })
+
+  describe('DisclosureAgreementTracker', () => {
+    const TEST_HASH = '0xA0E4C2F76C58916EC258F246851BEA091D14D4247A2FC3E18694461B1816E13B'
+    const TEST_AGREEMENT = [
+      TEST_HASH,
+      '1',
+      [address1, address2],
+    ]
+
+    before(createContracts)
+
+    it('should add agreement', () => 
+      catenaContract.addAgreement(...TEST_AGREEMENT))
+    
+    it('should get agreement', () =>
+      catenaContract.getAgreement(TEST_HASH)
+        .then((result) => {
+          expect(result).to.deep.equals({
+            previous: NULL_BYTES,
+            disclosureIndex: 1,
+            signedCount: 0,
+            signatories: TEST_AGREEMENT[2],
+            requiredSignatures: {
+              [address1]: true,
+              [address2]: true,
+            },
+          })
+        }))
+
+    it('should sign agreement', () =>
+      catenaContract.signAgreement(TEST_HASH, { from: address1 }))
+
+    it('should not be fully signed', () =>
+      catenaContract.isAgreementFullySigned(TEST_HASH)
+        .then((result) => expect(result).to.equal(false)))
+
+    it('should get partially signed agreement', () =>
+      catenaContract.getAgreement(TEST_HASH)
+        .then((result) => {
+          expect(result.signedCount).to.equal(1)
+          expect(result.requiredSignatures).to.deep.equal({
+            [address1]: false,
+            [address2]: true,
+          })
+        }))
+    
+    it('should sign agreement again', () =>
+      catenaContract.signAgreement(TEST_HASH, { from: address2 }))
+
+    it('should be fully signed', () =>
+      catenaContract.isAgreementFullySigned(TEST_HASH)
+        .then((result) => expect(result).to.equal(true)))
+  })
 })
