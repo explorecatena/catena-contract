@@ -1,11 +1,11 @@
 const { expect } = require('chai')
 const DisclosureAgreementTracker = artifacts.require('./DisclosureAgreementTracker.sol')
 
+const { NULL_BYTES } = require('./util');
+
 const DISCLOSURE_MANAGER_ADDRESS = '0x386a9370ec915d400247bb4d8e34c246cc1eda11'
 
 const TEST_HASH = '0xA0E4C2F76C58916EC258F246851BEA091D14D4247A2FC3E18694461B1816E13B'
-
-const NULL_BYTES = '0x0000000000000000000000000000000000000000000000000000000000000000'
 
 const FIELD_NAMES = [
   'agreementHash', 'disclosureIndex', 'signatories',
@@ -50,12 +50,14 @@ contract('DisclosureAgreementTracker', ([address1, address2, address3]) => {
     instance.disclosureCount().then((count) => expect(count.toString()).to.equal('1')))
 
   it('Should get newly created agreement', () =>
-    instance.agreementMap(TEST_HASH)
+    instance.getAgreement(TEST_HASH)
       .then((result) => {
-        expect(result).to.have.length(3)
+        expect(result).to.have.length(5)
         expect(result[0]).to.be.a('string').and.equal(NULL_BYTES) // agreement.previous
         expect(result[1].toString()).to.equal(TEST_AGREEMENT[1]) // agreement.disclosureIndex
         expect(result[2].toString()).to.equal('0') // agreement.signedCount
+        expect(result[3]).to.deep.equal(TEST_AGREEMENT[2])
+        expect(result[4]).to.deep.equal([true, true])
       }))
   
   it('Should add first signature', () =>
@@ -67,10 +69,11 @@ contract('DisclosureAgreementTracker', ([address1, address2, address3]) => {
       }))
   
   it('Should count first signature', () =>
-    instance.agreementMap(TEST_HASH)
+    instance.getAgreement(TEST_HASH)
       .then((result) => {
-        expect(result).to.have.length(3)
+        expect(result).to.have.length(5)
         expect(result[2].toString()).to.equal('1')
+        expect(result[4]).to.deep.equal([false, true])
       }))
 
   it('Should fail with invalid signature', () =>
@@ -90,4 +93,8 @@ contract('DisclosureAgreementTracker', ([address1, address2, address3]) => {
         expect(txData.logs[0].event).to.equal('agreementSigned')
         expect(txData.logs[1].event).to.equal('agreementFullySigned')
       }))
+
+  it('Should be fully signed', () =>
+    instance.isAgreementFullySigned(TEST_HASH)
+      .then((result) => expect(result).to.equal(true)))
 })

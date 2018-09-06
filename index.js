@@ -8,39 +8,49 @@ const NEW_ENTRY_EVENT_NAME = 'disclosureAdded'
 const GAS_LIMIT_NEW_ENTRY = 250000
 const GAS_LIMIT_AMEND_ENTRY = 500000
 
+const identity = (x) => x
+
 function isNumeric (n) {
   return Number.isFinite(Number.parseFloat(n))
 }
 
+function isPlainObject (x) {
+  return typeof x === 'object' && !Array.isArray(x) && x !== null
+}
+
 const isNil = (x) => typeof x === 'undefined' || x === null
 
-function init (web3, defaultOptions = {}) {
+const DisclosureManager = truffleContract(disclosureManagerSpec)
+
+const DisclosureAgreementTracker = truffleContract(agreementTrackerSpec)
+
+function CatenaContract (web3, disclosureManagerContract, agreementTrackerContract) {
   const web3Provider = web3.currentProvider || web3
-  const DisclosureManager = truffleContract(disclosureManagerSpec)
   DisclosureManager.setProvider(web3Provider)
-  DisclosureManager.defaults(defaultOptions)
-  const DisclosureAgreementTracker = truffleContract(agreementTrackerSpec)
   DisclosureAgreementTracker.setProvider(web3Provider)
-  DisclosureAgreementTracker.defaults(defaultOptions)
+  const disclosureManagerPromise = resolveInstance(disclosureManagerContract)
+  const agreementTrackerPromise = resolveInstance(agreementTrackerContract)
 
   const getBlock = promisify((numberOrHash, cb) => web3.eth.getBlock(numberOrHash, cb))
   const getNetwork = promisify(web3.version.getNetwork)
   const { toHex } = web3
 
-  function prepBytes (str, len) {
-    if (isNumeric(str)) {
-      // Solidity interprets a numeric string as a number, so convert it to hex here
-      return web3.fromAscii(str, len)
+  function prepBytes (bytes, len) {
+    if (typeof bytes === 'number') {
+      // convert all numbers to ascii
+      bytes = bytes.toString()
     }
-    if (typeof str !== 'string') {
-      throw new Error(`Expected valid string, got ${str}`)
+    if (typeof bytes !== 'string') {
+      throw new Error(`prepBytes expected valid number or string, got ${bytes}`)
     }
-    if (str.length > len) {
-      // This can maybe be packed instead!  (but coversions should be done front-end)
-      console.error(`Truncating ${str} to ${len}`)
-      str = str.substring(0, len)
+    if (!bytes.startsWith('0x')) {
+      bytes = web3.fromAscii(bytes, len)
     }
-    return str
+    if (((bytes.length - 2) / 2) > len) {
+      console.error(`Truncating ${bytes} to ${len}`)
+      return bytes.substring(0, (len * 2) + 2)
+    }
+    return bytes
   }
 
   function prepArg (type, value) {
@@ -52,15 +62,38 @@ function init (web3, defaultOptions = {}) {
     return value
   }
 
-  function prepArgs (spec, functionName, args) {
-    const { inputs } = spec.abi.find(f => functionName === f.name)
-    return inputs.map(({ name, type }) => {
-      const value = args[name]
+  function prepArgs (contractInstance, functionName, args) {
+    const fn = contractInstance.abi.find(f => functionName === f.name)
+    if (!fn) {
+      throw new Error(`Function ${functionName} does not exist on contract ${contractInstance.constructor.contractName}`)
+    }
+    return fn.inputs.map(({ name, type }, i) => {
+      const value = Array.isArray(args) ? args[i] : args[name]
       if (isNil(value)) {
         throw new Error(`Missing arg ${name} (${type}) for function ${functionName}, got ${JSON.stringify(args)}`)
       }
-      return prepArg(type, args[name])
+      return prepArg(type, value)
     })
+  }
+
+  function wrapCall (contractInstancePromise, functionName, resultHandler = identity) {
+    return (...args) => {
+      return contractInstancePromise.then(contractInstance => {
+        let options = args[args.length - 1]
+        if (isPlainObject(options)) {
+          args = args.slice(0, args.length - 1)
+        } else {
+          options = undefined
+        }
+        if (args.length === 1 && isPlainObject(args[0])) {
+          // Args specified by name instead of positionally
+          args = args[0]
+        }
+        const preppedArgs = prepArgs(contractInstance, functionName, args)
+        return contractInstance[functionName](...preppedArgs, options)
+          .then(resultHandler)
+      })
+    }
   }
 
   function isNewEntryEvent (log) {
@@ -120,53 +153,49 @@ function init (web3, defaultOptions = {}) {
   }
 
   function createPublishDisclosureArgs (contractInstance, disclosure, txOptions = {}) {
-    const { contractName } = DisclosureManager
     const { amends: amendsRow } = disclosure
     const isAmendment = !isNil(amendsRow)
     if (isAmendment && !(typeof amendsRow === 'number' && amendsRow > 0)) {
       return Promise.reject(new Error(`Invalid 'amends' row number ${amendsRow}: must be null, undefined, or a number > 0`))
     }
     const functionName = isAmendment ? 'amendEntry' : 'newEntry'
-    const args = prepArgs(disclosureManagerSpec, functionName, Object.assign({ rowNumber: amendsRow }, disclosure))
-    return resolveInstance(contractInstance)
-      .then(instance => instance.owner()
-        .then(owner => {
-          if (txOptions.from && txOptions.from !== owner) {
-            throw new Error(`Invalid 'from' address ${txOptions.from}: ${contractName} is owned by ${owner}`)
-          }
-          return {
-            functionName,
-            args,
-            options: Object.assign({}, defaultOptions, {
-              from: owner,
-              gas: isAmendment ? GAS_LIMIT_AMEND_ENTRY : GAS_LIMIT_NEW_ENTRY
-            }, txOptions)
-          }
-        }))
+    const args = prepArgs(contractInstance, functionName, Object.assign({ rowNumber: amendsRow }, disclosure))
+    return contractInstance.owner().then(owner => {
+      if (txOptions.from && txOptions.from !== owner) {
+        throw new Error(`Invalid 'from' address ${txOptions.from}: contract is owned by ${owner}`)
+      }
+      return {
+        functionName,
+        args,
+        options: Object.assign({
+          from: owner,
+          gas: isAmendment ? GAS_LIMIT_AMEND_ENTRY : GAS_LIMIT_NEW_ENTRY
+        }, txOptions)
+      }
+    })
   }
 
-  function createPublishDisclosureTx (contractInstance, disclosureData, txOptions = {}) {
-    return Promise.all([
-      resolveInstance(contractInstance),
-      createPublishDisclosureArgs(contractInstance, disclosureData, txOptions)
-    ]).then(([instance, { functionName, args, options }]) => Promise.all([
-      instance.contract[functionName].getData(...args),
-      instance.address,
-      options.from || instance.owner(),
-      options.gas || instance[functionName].estimateGas(...args),
-      options.gasPrice || web3.eth.getGasPrice(),
-      options.nonce || web3.eth.getTransactionCount(options.from),
-      getNetwork()
-    ])).then(([data, to, from, gasLimit, gasPrice, nonce, networkId]) => ({
-      value: toHex(0),
-      data,
-      to,
-      from,
-      gasLimit: toHex(gasLimit),
-      gasPrice: toHex(gasPrice),
-      nonce: toHex(nonce),
-      chainId: Number.parseInt(networkId)
-    }))
+  function createPublishDisclosureTx (disclosureData, txOptions = {}) {
+    return disclosureManagerPromise.then(disclosureManager =>
+      createPublishDisclosureArgs(disclosureManager, disclosureData, txOptions)
+        .then(({ functionName, args, options }) => Promise.all([
+          disclosureManager.contract[functionName].getData(...args),
+          disclosureManager.address,
+          options.from || disclosureManager.owner(),
+          options.gas || disclosureManager[functionName].estimateGas(...args),
+          options.gasPrice || web3.eth.getGasPrice(),
+          options.nonce || web3.eth.getTransactionCount(options.from),
+          getNetwork()
+        ])).then(([data, to, from, gasLimit, gasPrice, nonce, networkId]) => ({
+          value: toHex(0),
+          data,
+          to,
+          from,
+          gasLimit: toHex(gasLimit),
+          gasPrice: toHex(gasPrice),
+          nonce: toHex(nonce),
+          chainId: Number.parseInt(networkId)
+        })))
   }
 
   /**
@@ -179,16 +208,15 @@ function init (web3, defaultOptions = {}) {
     *
     * @see https://github.com/trufflesuite/truffle-contract
     */
-  function publishDisclosureTx (contractInstance, disclosureData, txOptions = {}) {
-    return resolveInstance(contractInstance)
-      .then(instance => createPublishDisclosureArgs(instance, disclosureData, txOptions)
+  function publishDisclosureTx (disclosureData, txOptions = {}) {
+    return disclosureManagerPromise.then(disclosureManager => 
+      createPublishDisclosureArgs(disclosureManager, disclosureData, txOptions)
         .then(({ functionName, args, options }) =>
-          instance[functionName].sendTransaction(...args, options)))
+          disclosureManager[functionName].sendTransaction(...args, options)))
   }
 
   function getPublishDisclosureTx (txId) {
-    return Promise.resolve(txId)
-      .then(DisclosureManager.getTransaction)
+    return DisclosureManager.getTransaction(txId)
       .then(tx => {
         if (!(tx && tx.receipt && tx.receipt.blockNumber)) {
           return null
@@ -198,8 +226,7 @@ function init (web3, defaultOptions = {}) {
   }
 
   function syncPublishDisclosureTx (txId) {
-    return Promise.resolve(txId)
-      .then(DisclosureManager.syncTransaction)
+    return DisclosureManager.syncTransaction(txId)
       .then(tx => handlePublishTx(txId, tx))
   }
 
@@ -213,14 +240,14 @@ function init (web3, defaultOptions = {}) {
     *
     * @see https://github.com/trufflesuite/truffle-contract
     */
-  function publishDisclosure (contractInstance, disclosureData, txOptions = {}) {
-    return publishDisclosureTx(contractInstance, disclosureData, txOptions)
+  function publishDisclosure (disclosureData, txOptions = {}) {
+    return publishDisclosureTx(disclosureData, txOptions)
       .then(syncPublishDisclosureTx)
   }
 
-  function watchDisclosureAdded (contractInstance, callback) {
-    return resolveInstance(contractInstance)
-      .then(instance => instance.disclosureAdded().watch((err, event) => {
+  function watchDisclosureAdded (callback) {
+    return disclosureManagerPromise.then(disclosureManager => 
+      disclosureManager.disclosureAdded().watch((err, event) => {
         if (err) {
           console.error(err)
           return
@@ -231,42 +258,33 @@ function init (web3, defaultOptions = {}) {
       }))
   }
 
-  function getAgreement (contractInstance, agreementHash) {
-    return resolveInstance(contractInstance).then(instance => {
-      const args = prepArgs(agreementTrackerSpec, 'agreementMap', [agreementHash])
-      return instance.agreementMap(agreementHash)
-        .then(agreement => {
-          console.log('getAgreement', agreement)
-          return agreement
-        })
-    })
-  }
+  const getAgreement = wrapCall(agreementTrackerPromise, 'getAgreement', (result) => ({
+    previous: result[0],
+    disclosureIndex: result[1].toNumber(),
+    signedCount: result[2].toNumber(),
+    signatories: result[3],
+    requiredSignatures: result[3].reduce((byAddress, address, i) => Object.assign(byAddress, {
+      [address]: result[4][i],
+    }), {})
+  }))
 
-  function addAgreement (contractInstance, agreementHash, disclosureIndex, signatories) {
-    return resolveInstance(contractInstance).then(instance => {
-      const args = prepArgs(agreementTrackerSpec, 'addAgreement', [agreementHash, disclosureIndex, signatories])
-      return instance.addAgreement(...args)
-        .then(agreement => {
-          console.log('addAgreement', agreement)
-          return agreement
-        })
-    })
-  }
+  const getDisclosureAgreementHash = wrapCall(agreementTrackerPromise, 'latestMap', (result) => result[0])
 
-  function signAgreement (contractInstance, agreementHash) {
-    return resolveInstance(contractInstance).then(instance => {
-      const args = prepArgs(agreementTrackerSpec, 'signAgreement', [agreementHash])
-      return instance.signAgreement(...args)
-        .then(agreement => {
-          console.log('signAgreement', agreement)
-          return agreement
-        })
-    })
-  }
+  const getDisclosureAgreementCount = wrapCall(agreementTrackerPromise, 'latestMap', (result) => result[1].toNumber())
+
+  const addAgreement = wrapCall(agreementTrackerPromise, 'addAgreement')
+
+  const signAgreement = wrapCall(agreementTrackerPromise, 'signAgreement')
+
+  const hasAgreement = wrapCall(agreementTrackerPromise, 'hasAgreement')
+
+  const hasDisclosureAgreement = wrapCall(agreementTrackerPromise, 'hasDisclosureAgreement')
+
+  const isAgreementFullySigned = wrapCall(agreementTrackerPromise, 'isAgreementFullySigned')
+
+  const isDisclosureFullySigned = wrapCall(agreementTrackerPromise, 'isDisclosureFullySigned')
 
   return {
-    DisclosureManager,
-    DisclosureAgreementTracker,
     publishDisclosure,
     publishDisclosureTx,
     getPublishDisclosureTx,
@@ -274,9 +292,19 @@ function init (web3, defaultOptions = {}) {
     watchDisclosureAdded,
     createPublishDisclosureTx,
     getAgreement,
+    getDisclosureAgreementHash,
+    getDisclosureAgreementCount,
     addAgreement,
     signAgreement,
+    hasAgreement,
+    hasDisclosureAgreement,
+    isAgreementFullySigned,
+    isDisclosureFullySigned,
   }
 }
 
-module.exports = init
+module.exports = {
+  CatenaContract,
+  DisclosureManager,
+  DisclosureAgreementTracker,
+}
