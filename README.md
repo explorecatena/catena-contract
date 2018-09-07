@@ -18,13 +18,12 @@ Install:
 Example usage:
 
 ```javascript
-const initCatenaContract = require('@catena/contract')
+const { CatenaContract } = require('@catena/contract')
 
-const { DisclosureManager } = initCatenaContract(web3)
+const catenaContract = CatenaContract(web3)
 
-DisclosureManager.deployed()
-  .then(instance => instance.pullRow(687))
-  .then(result => ...)
+catenaContract.getDisclosure(687)
+  .then(result => console.log(result))
 ```
 
 For more information on using a truffle contract see [Truffle Docs](http://truffleframework.com/docs/).
