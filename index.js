@@ -24,7 +24,14 @@ const DisclosureManager = truffleContract(disclosureManagerSpec)
 
 const DisclosureAgreementTracker = truffleContract(agreementTrackerSpec)
 
-function CatenaContract (web3, disclosureManagerContract, agreementTrackerContract) {
+function resolveInstance (contract) {
+  if (typeof contract.deployed === 'function') {
+    return contract.deployed()
+  }
+  return Promise.resolve(contract)
+}
+
+function CatenaContract (web3, disclosureManagerContract = DisclosureManager, agreementTrackerContract = DisclosureAgreementTracker) {
   const web3Provider = web3.currentProvider || web3
   DisclosureManager.setProvider(web3Provider)
   DisclosureAgreementTracker.setProvider(web3Provider)
@@ -101,13 +108,6 @@ function CatenaContract (web3, disclosureManagerContract, agreementTrackerContra
       throw new Error(`Invalid log object: ${log}`)
     }
     return log.event === NEW_ENTRY_EVENT_NAME
-  }
-
-  function resolveInstance (contract) {
-    if (typeof contract.deployed === 'function') {
-      return contract.deployed()
-    }
-    return Promise.resolve(contract)
   }
 
   function parseDisclosureAddedEvent (event) {
@@ -258,6 +258,30 @@ function CatenaContract (web3, disclosureManagerContract, agreementTrackerContra
       }))
   }
 
+  const parseDisclosurePull = (result) => {
+    const [
+      organization, recipient, location, amount, fundingType, date, purpose, comment
+    ] = result.slice(0, 8).map(x => web3.toAscii(x).replace(/\0/g, ''))
+    const amends = result[8]
+    return {
+      organization,
+      recipient,
+      location,
+      amount,
+      fundingType,
+      date,
+      purpose,
+      comment,
+      amends: (amends ? amends.toNumber() : 0) || null
+    }
+  }
+
+  const getDisclosure = wrapCall(disclosureManagerPromise, 'pullRow', parseDisclosurePull)
+
+  const getDisclosureAmendment = wrapCall(disclosureManagerPromise, 'pullEntry', parseDisclosurePull)
+
+  const getDisclosureCount = wrapCall(disclosureManagerPromise, 'getListCount', (x) => x.toNumber())
+
   const getAgreement = wrapCall(agreementTrackerPromise, 'getAgreement', ([
     previous, disclosureIndex, blockNumber, signedCount, signatories, requiredSignatures,
   ]) => ({
@@ -294,6 +318,9 @@ function CatenaContract (web3, disclosureManagerContract, agreementTrackerContra
     syncPublishDisclosureTx,
     watchDisclosureAdded,
     createPublishDisclosureTx,
+    getDisclosure,
+    getDisclosureAmendment,
+    getDisclosureCount,
     getAgreement,
     getDisclosureAgreementHash,
     getDisclosureAgreementCount,

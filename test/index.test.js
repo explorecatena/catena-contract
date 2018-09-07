@@ -73,10 +73,10 @@ contract('CatenaContract', ([owner, address1, address2]) => {
   })
 
   describe('DisclosureManager', () => {
-
-    beforeEach(createContracts)
     
     describe('#publishDisclosure()', () => {
+      before(createContracts)
+
       it('should publish correctly when called multiple times', () =>
         sequentialPublish(
           (d) => catenaContract.publishDisclosure(d),
@@ -92,12 +92,22 @@ contract('CatenaContract', ([owner, address1, address2]) => {
             expect(blockTimestamp).to.be.a('number').that.is.above(prevResult.blockTimestamp)
           },
           { rowNumber: 0, blockNumber: 0, blockTimestamp: 0 },
-        ).then((results) => {
-          expect(results).to.have.lengthOf(DISCLOSURE_COUNT)
-        }))
+        ))
+
+      it('should get correct count', () =>
+        catenaContract.getDisclosureCount().then((count) => 
+          expect(count).to.equal(DISCLOSURE_COUNT)))
+
+      it('should pull disclosure', () =>
+        catenaContract.getDisclosure(1).then((disclosure) =>
+          expect(disclosure).to.deep.equal(Object.assign({
+            amends: null,
+          }, testDisclosures[0]))))
     })
 
     describe('#publishDisclosureTx()', () => {
+      before(createContracts)
+
       it('should return transaction ID on each call', () =>
         sequentialPublish(
           (d) => catenaContract.publishDisclosureTx(d),
@@ -110,6 +120,8 @@ contract('CatenaContract', ([owner, address1, address2]) => {
     })
 
     describe('#syncPublishDisclosureTx()', () => {
+      before(createContracts)
+
       it('should wait for transaction confirmation', () =>
         catenaContract.publishDisclosureTx(testDisclosures[0])
           .then(catenaContract.syncPublishDisclosureTx)
@@ -127,6 +139,8 @@ contract('CatenaContract', ([owner, address1, address2]) => {
     })
 
     describe('#watchDisclosureAdded()', () => {
+      before(createContracts)
+
       it('should record published disclosures', () => {
         const eventResults = {}
         const publishResults = {}
@@ -148,6 +162,8 @@ contract('CatenaContract', ([owner, address1, address2]) => {
     })
 
     describe('#createPublishDisclosureTx()', () => {
+      beforeEach(createContracts)
+
       const organization = 'TEST ORG'
       const recipient = 'BITACCESS INC.'
       const location = 'OTTAWA,ON,CA'
