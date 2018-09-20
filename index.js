@@ -1,5 +1,5 @@
+const promisify = require('es6-promisify')
 const truffleContract = require('truffle-contract')
-const Web3 = require('web3')
 const disclosureManagerSpec = require('./build/contracts/DisclosureManager.json')
 const agreementTrackerSpec = require('./build/contracts/DisclosureAgreementTracker.json')
 
@@ -33,14 +33,14 @@ function resolveInstance (contract) {
 
 function CatenaContract (web3, disclosureManagerContract = DisclosureManager, agreementTrackerContract = DisclosureAgreementTracker) {
   const web3Provider = web3.currentProvider || web3
-  web3 = new Web3(web3Provider)
   DisclosureManager.setProvider(web3Provider)
   DisclosureAgreementTracker.setProvider(web3Provider)
   const disclosureManagerPromise = resolveInstance(disclosureManagerContract)
   const agreementTrackerPromise = resolveInstance(agreementTrackerContract)
 
-  const getNetwork = () => web3.eth.net.getId().then((x) => x.toString())
-  const { toHex } = web3.utils
+  const getBlock = promisify((numberOrHash, cb) => web3.eth.getBlock(numberOrHash, cb))
+  const getNetwork = promisify(web3.version.getNetwork)
+  const { toHex } = web3
 
   function prepBytes (bytes, len) {
     if (typeof bytes === 'number') {
@@ -51,7 +51,7 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
       throw new Error(`prepBytes expected valid number or string, got ${bytes}`)
     }
     if (!bytes.startsWith('0x')) {
-      bytes = web3.utils.toHex(bytes)
+      bytes = web3.fromAscii(bytes, len)
     }
     if (((bytes.length - 2) / 2) > len) {
       console.error(`Truncating ${bytes} to ${len}`)
@@ -125,7 +125,7 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
     const rowNumber = Number.parseInt(rowNumberStr)
     return Promise.all([
       getNetwork(),
-      web3.eth.getBlock(blockNumber),
+      getBlock(blockNumber)
     ]).then(([networkId, block]) => ({
       txId,
       contractAddress,
@@ -261,7 +261,7 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
   const parseDisclosurePull = (result) => {
     const [
       organization, recipient, location, amount, fundingType, date, purpose, comment
-    ] = result.slice(0, 8).map(x => web3.utils.hexToString(x).replace(/\0/g, ''))
+    ] = result.slice(0, 8).map(x => web3.toAscii(x).replace(/\0/g, ''))
     const amends = result[8]
     return {
       organization,

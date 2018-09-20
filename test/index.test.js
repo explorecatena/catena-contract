@@ -1,9 +1,16 @@
+const { contract, web3 } = global
+if (!contract || !web3) {
+  console.error('Error: Run tests using truffle test')
+  process.exit(1)
+}
+const { toHex } = web3
 
+global.Promise = require('bluebird')
 const { expect } = require('chai')
 
 const { CatenaContract } = require('../index.js')
 const allData = require('./data.json')
-const { web3, toHex, NULL_BYTES } = require('./util')
+const { NULL_BYTES } = require('./util')
 
 const DisclosureManager = artifacts.require('DisclosureManager')
 const DisclosureAgreementTracker = artifacts.require('DisclosureAgreementTracker')
@@ -13,7 +20,7 @@ const txIdRegex = /^0x[0-9a-fA-F]{64}$/
 const DISCLOSURE_COUNT = 4
 const testDisclosures = allData.slice(0, DISCLOSURE_COUNT)
 
-function sequentialPublish (publishFn, callback, startingValue = {}) {
+function sequentialPublish(publishFn, callback, startingValue = {}) {
   const results = []
   return Promise.reduce(
     testDisclosures,
@@ -34,9 +41,6 @@ contract('CatenaContract', ([owner, address1, address2]) => {
   let catenaContract
   let disclosureManager
   let agreementTracker
-  let web3NetworkId
-
-  const setNetworkId = () => web3.eth.net.getId().then((x) => { web3NetworkId = x.toString() })
 
   const createContracts = () => DisclosureManager.new({ from: owner }).then(disclosureManagerInstance => {
     disclosureManager = disclosureManagerInstance
@@ -46,7 +50,6 @@ contract('CatenaContract', ([owner, address1, address2]) => {
     })
   })
 
-  before(setNetworkId)
   before(createContracts)
 
   it('should expose expected interface', () => {
@@ -70,6 +73,7 @@ contract('CatenaContract', ([owner, address1, address2]) => {
   })
 
   describe('DisclosureManager', () => {
+    
     describe('#publishDisclosure()', () => {
       before(createContracts)
 
@@ -82,7 +86,7 @@ contract('CatenaContract', ([owner, address1, address2]) => {
             } = result
             expect(txId).to.be.a('string').that.matches(txIdRegex)
             expect(contractAddress).to.be.a('string').that.equals(disclosureManager.address)
-            expect(networkId).to.be.a('string').that.equals(web3NetworkId)
+            expect(networkId).to.be.a('string').that.equals(web3.version.network)
             expect(rowNumber).to.be.a('number').that.equals(prevResult.rowNumber + 1)
             expect(blockNumber).to.be.a('number').that.is.above(prevResult.blockNumber)
             expect(blockTimestamp).to.be.a('number').that.is.above(prevResult.blockTimestamp)
@@ -91,7 +95,7 @@ contract('CatenaContract', ([owner, address1, address2]) => {
         ))
 
       it('should get correct count', () =>
-        catenaContract.getDisclosureCount().then((count) =>
+        catenaContract.getDisclosureCount().then((count) => 
           expect(count).to.equal(DISCLOSURE_COUNT)))
 
       it('should pull disclosure', () =>
@@ -127,7 +131,7 @@ contract('CatenaContract', ([owner, address1, address2]) => {
             } = result
             expect(txId).to.be.a('string').that.matches(txIdRegex)
             expect(contractAddress).to.be.a('string').that.equals(disclosureManager.address)
-            expect(networkId).to.be.a('string').that.equals(web3NetworkId)
+            expect(networkId).to.be.a('string').that.equals(web3.version.network)
             expect(rowNumber).to.be.a('number').that.above(0)
             expect(blockNumber).to.be.a('number').that.is.above(0)
             expect(blockTimestamp).to.be.a('number').that.is.above(0)
@@ -185,6 +189,7 @@ contract('CatenaContract', ([owner, address1, address2]) => {
         gasLimit: toHex(txOptions.gas),
         gasPrice: toHex(txOptions.gasPrice),
         nonce: toHex(txOptions.nonce),
+        chainId: Number.parseInt(web3.version.network),
       }
       it('should creact correct newEntry tx', () =>
         catenaContract.createPublishDisclosureTx(disclosure, txOptions)
@@ -192,7 +197,6 @@ contract('CatenaContract', ([owner, address1, address2]) => {
             expect(tx).to.deep.equals(Object.assign({}, partialExpectedTx, {
               to: disclosureManager.address,
               data: disclosureManager.contract.newEntry.getData(...orderedArgs),
-              chainId: Number.parseInt(web3NetworkId),
             }))
           }))
       it('should create correct amendEntry tx', () => {
@@ -204,7 +208,6 @@ contract('CatenaContract', ([owner, address1, address2]) => {
           expect(tx).to.deep.equals(Object.assign({}, partialExpectedTx, {
             to: disclosureManager.address,
             data: disclosureManager.contract.amendEntry.getData(amendsRow, ...orderedArgs),
-            chainId: Number.parseInt(web3NetworkId),
           }))
         })
       })
@@ -228,9 +231,9 @@ contract('CatenaContract', ([owner, address1, address2]) => {
 
     before(createContracts)
 
-    it('should add agreement', () =>
+    it('should add agreement', () => 
       catenaContract.addAgreement(...TEST_AGREEMENT))
-
+    
     it('should get agreement', () =>
       catenaContract.getAgreement(TEST_HASH)
         .then((result) => {
@@ -264,7 +267,7 @@ contract('CatenaContract', ([owner, address1, address2]) => {
             [address2]: true,
           })
         }))
-
+    
     it('should sign agreement again', () =>
       catenaContract.signAgreement(TEST_HASH, { from: address2 }))
 
