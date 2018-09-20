@@ -20,7 +20,7 @@
     "truffle": "^4.1.14"
   },
   "peerDependencies": {
-    "web3": "^0.20.2"
+    "web3": "^1.0.0-beta.1"
   },
   "devDependencies": {
     "babel-core": "^6.26.3",
@@ -28,7 +28,6 @@
     "babel-preset-env": "^1.7.0",
     "bluebird": "^3.5.1",
     "chai": "^4.1.2",
-    "es6-promisify": "^5.0.0",
     "eslint": "^4.18.2",
     "eslint-config-standard": "^11.0.0",
     "eslint-loader": "^1.9.0",
@@ -46,7 +45,7 @@
     "mocha": "^4.0.1",
     "solc": "^0.4.18",
     "truffle-contract": "github:explorecatena/truffle-contract#catena",
-    "web3": "^0.20.7",
+    "web3": "^1.0.0-beta.36",
     "webpack": "^3.8.1",
     "yargs": "^10.0.3"
   },
