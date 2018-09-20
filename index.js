@@ -1,4 +1,3 @@
-const promisify = require('es6-promisify')
 const truffleContract = require('truffle-contract')
 const disclosureManagerSpec = require('./build/contracts/DisclosureManager.json')
 const agreementTrackerSpec = require('./build/contracts/DisclosureAgreementTracker.json')
@@ -38,9 +37,7 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
   const disclosureManagerPromise = resolveInstance(disclosureManagerContract)
   const agreementTrackerPromise = resolveInstance(agreementTrackerContract)
 
-  const getBlock = promisify((numberOrHash, cb) => web3.eth.getBlock(numberOrHash, cb))
-  const getNetwork = promisify(web3.version.getNetwork)
-  const { toHex } = web3
+  const getNetwork = () => web3.eth.net.getId().then((x) => x.toString())
 
   function prepBytes (bytes, len) {
     if (typeof bytes === 'number') {
@@ -125,7 +122,7 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
     const rowNumber = Number.parseInt(rowNumberStr)
     return Promise.all([
       getNetwork(),
-      getBlock(blockNumber)
+      web3.eth.getBlock(blockNumber),
     ]).then(([networkId, block]) => ({
       txId,
       contractAddress,
@@ -187,13 +184,13 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
           options.nonce || web3.eth.getTransactionCount(options.from),
           getNetwork()
         ])).then(([data, to, from, gasLimit, gasPrice, nonce, networkId]) => ({
-          value: toHex(0),
+          value: 0,
           data,
           to,
           from,
-          gasLimit: toHex(gasLimit),
-          gasPrice: toHex(gasPrice),
-          nonce: toHex(nonce),
+          gasLimit: gasLimit,
+          gasPrice: gasPrice,
+          nonce: nonce,
           chainId: Number.parseInt(networkId)
         })))
   }
