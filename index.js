@@ -39,7 +39,9 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
   const agreementTrackerPromise = resolveInstance(agreementTrackerContract)
 
   const getBlock = promisify((numberOrHash, cb) => web3.eth.getBlock(numberOrHash, cb))
-  const getNetwork = promisify(web3.version.getNetwork)
+  const getNetwork = promisify(web3.version.getNetwork.bind(web3.version))
+  const getGasPrice = promisify(web3.eth.getGasPrice.bind(web3.eth))
+  const getTransactionCount = promisify(web3.eth.getTransactionCount.bind(web3.eth))
   const { toHex } = web3
 
   function prepBytes (bytes, len) {
@@ -183,8 +185,8 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
           disclosureManager.address,
           options.from || disclosureManager.owner(),
           options.gas || disclosureManager[functionName].estimateGas(...args),
-          options.gasPrice || web3.eth.getGasPrice(),
-          options.nonce || web3.eth.getTransactionCount(options.from),
+          options.gasPrice || getGasPrice(),
+          options.nonce || getTransactionCount(options.from),
           getNetwork()
         ])).then(([data, to, from, gasLimit, gasPrice, nonce, networkId]) => ({
           value: toHex(0),
