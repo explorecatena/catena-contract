@@ -332,6 +332,8 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
     hasDisclosureAgreement,
     isAgreementFullySigned,
     isDisclosureFullySigned,
+    getDisclosureManager: () => disclosureManagerPromise,
+    getDisclosureAgreementTracker: () => agreementTrackerPromise,
   }
 }
 
