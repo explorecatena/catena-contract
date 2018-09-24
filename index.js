@@ -7,8 +7,11 @@ const NEW_ENTRY_EVENT_NAME = 'disclosureAdded'
 
 const GAS_LIMIT_NEW_ENTRY = 250000
 const GAS_LIMIT_AMEND_ENTRY = 500000
+const GAS_LIMIT_ADD_AGREEMENT = 500000
 
 const identity = (x) => x
+
+const hexRegex = /^(0x)?[0-9a-f]*$/
 
 function isNumeric (n) {
   return Number.isFinite(Number.parseFloat(n))
@@ -154,6 +157,31 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
       .then(parseDisclosureAddedEvent)
   }
 
+  function createTxFn (contractPromise, createArgsFn) {
+    return (args, txOptions = {}) => {
+      return contractPromise.then(contractInstance =>
+        createPublishDisclosureArgs(contractInstance, args, txOptions)
+          .then(({ functionName, args, options }) => Promise.all([
+            contractInstance.contract[functionName].getData(...args),
+            contractInstance.address,
+            options.from || contractInstance.owner(),
+            options.gas || contractInstance[functionName].estimateGas(...args),
+            options.gasPrice || getGasPrice(),
+            options.nonce || getTransactionCount(options.from),
+            getNetwork()
+          ])).then(([data, to, from, gasLimit, gasPrice, nonce, networkId]) => ({
+            value: toHex(0),
+            data,
+            to,
+            from,
+            gasLimit: toHex(gasLimit),
+            gasPrice: toHex(gasPrice),
+            nonce: toHex(nonce),
+            chainId: Number.parseInt(networkId)
+          })))
+    }
+  }
+
   function createPublishDisclosureArgs (contractInstance, disclosure, txOptions = {}) {
     const { amends: amendsRow } = disclosure
     const isAmendment = !isNil(amendsRow)
@@ -177,28 +205,7 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
     })
   }
 
-  function createPublishDisclosureTx (disclosureData, txOptions = {}) {
-    return disclosureManagerPromise.then(disclosureManager =>
-      createPublishDisclosureArgs(disclosureManager, disclosureData, txOptions)
-        .then(({ functionName, args, options }) => Promise.all([
-          disclosureManager.contract[functionName].getData(...args),
-          disclosureManager.address,
-          options.from || disclosureManager.owner(),
-          options.gas || disclosureManager[functionName].estimateGas(...args),
-          options.gasPrice || getGasPrice(),
-          options.nonce || getTransactionCount(options.from),
-          getNetwork()
-        ])).then(([data, to, from, gasLimit, gasPrice, nonce, networkId]) => ({
-          value: toHex(0),
-          data,
-          to,
-          from,
-          gasLimit: toHex(gasLimit),
-          gasPrice: toHex(gasPrice),
-          nonce: toHex(nonce),
-          chainId: Number.parseInt(networkId)
-        })))
-  }
+  const createPublishDisclosureTx = createTxFn(disclosureManagerPromise, createPublishDisclosureArgs)
 
   /**
     * Publish the provided disclosure to the DisclosureManager contract and resolve to txId after
@@ -278,6 +285,40 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
     }
   }
 
+  function createAddAgreementArgs (contractInstance, agreement, txOptions = {}) {
+    return Promise.resolve().then(() => {
+      const { agreementHash, disclosureIndex, signatories } = agreement
+      if (typeof agreementHash !== 'string' || hexRegex.test(agreementHash)) {
+        throw new Error('Invalid "agreementHash": must be a hex string')
+      }
+      if (typeof disclosureIndex !== 'number' || disclosureIndex < 1) {
+        throw new Error('Invalid "disclosureIndex": must be number greater than 0')
+      }
+      if (!Array.isArray(signatories) ||
+        signatories.length === 0 ||
+        signatories.some((s) => !web3.isAddress(s))) {
+        throw new Error('Invalid "signatories": must be non-empty array of addresses')
+      }
+      const functionName = 'addAgreement'
+      const args = prepArgs(contractInstance, functionName, agreement)
+      return contractInstance.owner().then(owner => {
+        if (txOptions.from && txOptions.from !== owner) {
+          throw new Error(`Invalid 'from' address ${txOptions.from}: contract is owned by ${owner}`)
+        }
+        return {
+          functionName,
+          args,
+          options: Object.assign({
+            from: owner,
+            gas: GAS_LIMIT_ADD_AGREEMENT
+          }, txOptions)
+        }
+      })
+    })
+  }
+
+  const createAddAgreementTx = createTxFn(agreementTrackerPromise, createAddAgreementArgs)
+
   const getDisclosure = wrapCall(disclosureManagerPromise, 'pullRow', parseDisclosurePull)
 
   const getDisclosureAmendment = wrapCall(disclosureManagerPromise, 'pullEntry', parseDisclosurePull)
@@ -326,6 +367,7 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
     getAgreement,
     getDisclosureAgreementHash,
     getDisclosureAgreementCount,
+    createAddAgreementTx,
     addAgreement,
     signAgreement,
     hasAgreement,
