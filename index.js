@@ -11,7 +11,7 @@ const GAS_LIMIT_ADD_AGREEMENT = 500000
 
 const identity = (x) => x
 
-const hexRegex = /^(0x)?[0-9a-f]*$/
+const hexRegex = /^0x[0-9a-f]*$/
 
 function isNumeric (n) {
   return Number.isFinite(Number.parseFloat(n))
@@ -160,7 +160,7 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
   function createTxFn (contractPromise, createArgsFn) {
     return (args, txOptions = {}) => {
       return contractPromise.then(contractInstance =>
-        createPublishDisclosureArgs(contractInstance, args, txOptions)
+        createArgsFn(contractInstance, args, txOptions)
           .then(({ functionName, args, options }) => Promise.all([
             contractInstance.contract[functionName].getData(...args),
             contractInstance.address,
@@ -288,7 +288,7 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
   function createAddAgreementArgs (contractInstance, agreement, txOptions = {}) {
     return Promise.resolve().then(() => {
       const { agreementHash, disclosureIndex, signatories } = agreement
-      if (typeof agreementHash !== 'string' || hexRegex.test(agreementHash)) {
+      if (typeof agreementHash !== 'string' || !hexRegex.test(agreementHash)) {
         throw new Error('Invalid "agreementHash": must be a hex string')
       }
       if (typeof disclosureIndex !== 'number' || disclosureIndex < 1) {
