@@ -8,6 +8,7 @@ const NEW_ENTRY_EVENT_NAME = 'disclosureAdded'
 const GAS_LIMIT_NEW_ENTRY = 250000
 const GAS_LIMIT_AMEND_ENTRY = 500000
 const GAS_LIMIT_ADD_AGREEMENT = 500000
+const GAS_LIMIT_SIGN_AGREEMENT = 100000
 
 const identity = (x) => x
 
@@ -285,10 +286,12 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
     }
   }
 
+  const isValidHash = (h) => typeof h === 'string' && hexRegex.test(h)
+
   function createAddAgreementArgs (contractInstance, agreement, txOptions = {}) {
     return Promise.resolve().then(() => {
       const { agreementHash, disclosureIndex, signatories } = agreement
-      if (typeof agreementHash !== 'string' || !hexRegex.test(agreementHash)) {
+      if (!isValidHash(agreementHash)) {
         throw new Error('Invalid "agreementHash": must be a hex string')
       }
       if (typeof disclosureIndex !== 'number' || disclosureIndex < 1) {
@@ -314,6 +317,23 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
           }, txOptions)
         }
       })
+    })
+  }
+
+  function createSignAgreementArgs (contractInstance, agreementHash, txOptions = {}) {
+    return Promise.resolve().then(() => {
+      if (!isValidHash(agreementHash)) {
+        throw new Error('Invalid "agreementHash": must be a hex string')
+      }
+      const functionName = 'signAgreement'
+      const args = prepArgs(contractInstance, functionName, { agreementHash })
+      return {
+        functionName,
+        args,
+        options: Object.assign({
+          gas: GAS_LIMIT_SIGN_AGREEMENT,
+        }, txOptions)
+      }
     })
   }
 
@@ -352,6 +372,8 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
 
   const signAgreement = wrapCall(agreementTrackerPromise, 'signAgreement')
 
+  const createSignAgreementTx = createTxFn(agreementTrackerPromise, createSignAgreementArgs)
+
   const hasAgreement = wrapCall(agreementTrackerPromise, 'hasAgreement')
 
   const hasDisclosureAgreement = wrapCall(agreementTrackerPromise, 'hasDisclosureAgreement')
@@ -376,6 +398,7 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
     createAddAgreementTx,
     addAgreement,
     signAgreement,
+    createSignAgreementTx,
     hasAgreement,
     hasDisclosureAgreement,
     isAgreementFullySigned,
