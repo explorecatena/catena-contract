@@ -1,19 +1,13 @@
 const { expect } = require('chai')
 const DisclosureAgreementTracker = artifacts.require('./DisclosureAgreementTracker.sol')
 
-const { NULL_BYTES } = require('./util');
+const { NULL_BYTES } = require('./util')
 
 const DISCLOSURE_MANAGER_ADDRESS = '0x386a9370ec915d400247bb4d8e34c246cc1eda11'
 
 const TEST_HASH = '0xA0E4C2F76C58916EC258F246851BEA091D14D4247A2FC3E18694461B1816E13B'
 
-const FIELD_NAMES = [
-  'agreementHash', 'disclosureIndex', 'signatories',
-]
-
-// tests
 contract('DisclosureAgreementTracker', ([address1, address2, address3]) => {
-
   const TEST_AGREEMENT = [
     TEST_HASH,
     1,
@@ -27,13 +21,13 @@ contract('DisclosureAgreementTracker', ([address1, address2, address3]) => {
   }))
 
   it('Should have correct disclosure manager address', () =>
-    instance.disclosureManager().then((address) => 
+    instance.disclosureManager().then((address) =>
       expect(address).to.equal(DISCLOSURE_MANAGER_ADDRESS)))
 
   it('Should have zero agreements', () =>
     instance.agreementCount().then((count) => expect(count.toString()).to.equal('0')))
 
-  it('Should have zero disclosures', () => 
+  it('Should have zero disclosures', () =>
     instance.disclosureCount().then((count) => expect(count.toString()).to.equal('0')))
 
   it('Should add agreement', () =>
@@ -46,7 +40,7 @@ contract('DisclosureAgreementTracker', ([address1, address2, address3]) => {
   it('Should have one agreement', () =>
     instance.agreementCount().then((count) => expect(count.toString()).to.equal('1')))
 
-  it('Should have one disclosures', () => 
+  it('Should have one disclosures', () =>
     instance.disclosureCount().then((count) => expect(count.toString()).to.equal('1')))
 
   it('Should get newly created agreement', () =>
@@ -61,7 +55,7 @@ contract('DisclosureAgreementTracker', ([address1, address2, address3]) => {
         expect(signatories).to.deep.equal(TEST_AGREEMENT[2])
         expect(requiredSignatures).to.deep.equal([true, true])
       }))
-  
+
   it('Should add first signature', () =>
     instance.signAgreement(TEST_HASH, { from: address1 })
       .then((txData) => {
@@ -69,7 +63,7 @@ contract('DisclosureAgreementTracker', ([address1, address2, address3]) => {
         expect(txData.logs).to.have.length(1, 'signAgreement call has no logs')
         expect(txData.logs[0].event).to.equal('agreementSigned', 'signAgreement did not emit agreementSigned event')
       }))
-  
+
   it('Should count first signature', () =>
     instance.getAgreement(TEST_HASH)
       .then((result) => {

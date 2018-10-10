@@ -20,7 +20,7 @@ const txIdRegex = /^0x[0-9a-fA-F]{64}$/
 const DISCLOSURE_COUNT = 4
 const testDisclosures = allData.slice(0, DISCLOSURE_COUNT)
 
-function sequentialPublish(publishFn, callback, startingValue = {}) {
+function sequentialPublish (publishFn, callback, startingValue = {}) {
   const results = []
   return Promise.reduce(
     testDisclosures,
@@ -73,7 +73,6 @@ contract('CatenaContract', ([owner, address1, address2]) => {
   })
 
   describe('DisclosureManager', () => {
-    
     describe('#publishDisclosure()', () => {
       before(createContracts)
 
@@ -95,7 +94,7 @@ contract('CatenaContract', ([owner, address1, address2]) => {
         ))
 
       it('should get correct count', () =>
-        catenaContract.getDisclosureCount().then((count) => 
+        catenaContract.getDisclosureCount().then((count) =>
           expect(count).to.equal(DISCLOSURE_COUNT)))
 
       it('should pull disclosure', () =>
@@ -231,15 +230,17 @@ contract('CatenaContract', ([owner, address1, address2]) => {
 
     before(createContracts)
 
-    it('should add agreement', () => 
+    it('should add agreement', () =>
       catenaContract.addAgreement(...TEST_AGREEMENT))
-    
+
     it('should get agreement', () =>
       catenaContract.getAgreement(TEST_HASH)
         .then((result) => {
+          expect(result).to.be.a('object')
           expect(result.blockNumber).to.be.above(0)
           expect(result).to.deep.equals({
             previous: NULL_BYTES,
+            disclosureManagerAddress: disclosureManager.address,
             disclosureIndex: 1,
             signedCount: 0,
             blockNumber: result.blockNumber,
@@ -267,7 +268,7 @@ contract('CatenaContract', ([owner, address1, address2]) => {
             [address2]: true,
           })
         }))
-    
+
     it('should sign agreement again', () =>
       catenaContract.signAgreement(TEST_HASH, { from: address2 }))
 
