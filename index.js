@@ -349,24 +349,27 @@ function CatenaContract (web3, disclosureManagerContract = DisclosureManager, ag
 
   const getAgreement = wrapCall(agreementTrackerPromise, 'getAgreement', ([
     previous, disclosureIndex, blockNumber, signedCount, signatories, requiredSignatures,
-  ]) => getDisclosureManagerAddress()
-    .then((disclosureManagerAddress) => {
-      const disclosureIndexNumber = disclosureIndex.toNumber()
-      if (disclosureIndexNumber === 0) {
-        return null
-      }
-      return {
-        previous,
-        disclosureManagerAddress,
-        disclosureIndex: disclosureIndexNumber,
-        blockNumber: blockNumber.toNumber(),
-        signedCount: signedCount.toNumber(),
-        signatories: signatories,
-        requiredSignatures: signatories.reduce((byAddress, address, i) => Object.assign(byAddress, {
-          [address]: requiredSignatures[i],
-        }), {})
-      }
-    }))
+  ]) => Promise.all([
+    agreementTrackerPromise,
+    getDisclosureManagerAddress(),
+  ]).then(([contractInstance, disclosureManagerAddress]) => {
+    const disclosureIndexNumber = disclosureIndex.toNumber()
+    if (disclosureIndexNumber === 0) {
+      return null
+    }
+    return {
+      contractAddress: contractInstance.address,
+      previous,
+      disclosureManagerAddress,
+      disclosureIndex: disclosureIndexNumber,
+      blockNumber: blockNumber.toNumber(),
+      signedCount: signedCount.toNumber(),
+      signatories: signatories,
+      requiredSignatures: signatories.reduce((byAddress, address, i) => Object.assign(byAddress, {
+        [address]: requiredSignatures[i],
+      }), {})
+    }
+  }))
 
   const getDisclosureAgreementHash = wrapCall(agreementTrackerPromise, 'latestMap', (result) => result[0])
 

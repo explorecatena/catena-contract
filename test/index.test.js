@@ -239,6 +239,7 @@ contract('CatenaContract', ([owner, address1, address2]) => {
           expect(result).to.be.a('object')
           expect(result.blockNumber).to.be.above(0)
           expect(result).to.deep.equals({
+            contractAddress: agreementTracker.address,
             previous: NULL_BYTES,
             disclosureManagerAddress: disclosureManager.address,
             disclosureIndex: 1,
